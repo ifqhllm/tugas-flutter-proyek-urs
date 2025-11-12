@@ -14,12 +14,13 @@ dependencies:
   # Packages yang Sudah Ada
   shared_preferences: ^2.2.3 # Untuk menyimpan nama pengguna
   http: ^1.2.1               # Untuk integrasi API waktu salat
-  
+
   # Packages Baru untuk Fungsionalitas Inti
   table_calendar: ^3.1.1     # Untuk tampilan kalender interaktif
   hive: ^2.2.3               # Database lokal cepat untuk menyimpan catatan haid
   hive_flutter: ^1.1.0       # Integrasi Hive dengan Flutter
   intl: ^0.19.0              # Untuk format tanggal dan lokal bahasa Indonesia
+  geolocator: ^12.0.0        # Untuk mendapatkan lokasi pengguna
 
 dev_dependencies:
   flutter_test:
