@@ -1,5 +1,6 @@
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/haid_record.dart';
+import '../models/blood_event.dart';
 import 'package:flutter/foundation.dart';
 
 class HaidService {
@@ -50,6 +51,15 @@ class HaidService {
           "Tidak ada siklus haid yang aktif untuk mencatat event darah.");
     }
 
+    // Create new blood event
+    final bloodEvent = BloodEvent(timestamp: timestamp, type: type);
+
+    // Add to the active record's blood events
+    activeRecord.bloodEvents.add(bloodEvent);
+
+    // Save the record
+    await activeRecord.save();
+
     debugPrint("Event darah '$type' dicatat pada $timestamp untuk siklus ini.");
   }
 
@@ -68,6 +78,13 @@ class HaidService {
     activeRecord.endDate = endDate;
 
     await activeRecord.save();
+  }
+
+  Future<void> deleteBloodEvent(HaidRecord record, int eventIndex) async {
+    if (eventIndex >= 0 && eventIndex < record.bloodEvents.length) {
+      record.bloodEvents.removeAt(eventIndex);
+      await record.save();
+    }
   }
 
   Future<void> clearAllRecords() async {

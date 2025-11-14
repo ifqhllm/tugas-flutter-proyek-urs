@@ -1,4 +1,5 @@
 import 'package:hive/hive.dart';
+import 'blood_event.dart';
 
 part 'haid_record.g.dart';
 
@@ -20,12 +21,17 @@ class HaidRecord extends HiveObject {
   @HiveField(3)
   late String notes;
 
+  // List of blood events
+  @HiveField(4)
+  late List<BloodEvent> bloodEvents;
+
   HaidRecord({
     required this.startDate,
     this.endDate,
     this.durationDays = 0,
     this.notes = '',
-  });
+    List<BloodEvent>? bloodEvents,
+  }) : bloodEvents = bloodEvents ?? [];
 
   // Metode untuk menghitung durasi saat haid selesai
   void calculateDuration() {

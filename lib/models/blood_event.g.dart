@@ -1,44 +1,35 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'haid_record.dart';
+part of 'blood_event.dart';
 
 // **************************************************************************
 // TypeAdapterGenerator
 // **************************************************************************
 
-class HaidRecordAdapter extends TypeAdapter<HaidRecord> {
+class BloodEventAdapter extends TypeAdapter<BloodEvent> {
   @override
-  final int typeId = 0;
+  final int typeId = 1;
 
   @override
-  HaidRecord read(BinaryReader reader) {
+  BloodEvent read(BinaryReader reader) {
     final numOfFields = reader.readByte();
     final fields = <int, dynamic>{
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
-    return HaidRecord(
-      startDate: fields[0] as DateTime,
-      endDate: fields[1] as DateTime?,
-      durationDays: fields[2] as int,
-      notes: fields[3] as String,
-      bloodEvents: (fields[4] as List?)?.cast<BloodEvent>(),
+    return BloodEvent(
+      timestamp: fields[0] as DateTime,
+      type: fields[1] as String,
     );
   }
 
   @override
-  void write(BinaryWriter writer, HaidRecord obj) {
+  void write(BinaryWriter writer, BloodEvent obj) {
     writer
-      ..writeByte(5)
-      ..writeByte(0)
-      ..write(obj.startDate)
-      ..writeByte(1)
-      ..write(obj.endDate)
       ..writeByte(2)
-      ..write(obj.durationDays)
-      ..writeByte(3)
-      ..write(obj.notes)
-      ..writeByte(4)
-      ..write(obj.bloodEvents);
+      ..writeByte(0)
+      ..write(obj.timestamp)
+      ..writeByte(1)
+      ..write(obj.type);
   }
 
   @override
@@ -47,7 +38,7 @@ class HaidRecordAdapter extends TypeAdapter<HaidRecord> {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is HaidRecordAdapter &&
+      other is BloodEventAdapter &&
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
