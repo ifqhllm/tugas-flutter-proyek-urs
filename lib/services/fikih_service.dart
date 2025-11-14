@@ -11,7 +11,7 @@ class FikihService {
 
     // 1. Durasi Kurang dari Minimal Haid
     if (duration < minHaidHours) {
-      return 'ISTIHADAH (Kurang 24 Jam)';
+      return 'ISTIHADAH (Kurang dari 24 Jam)';
     }
 
     // 2. Durasi Melebihi Maksimal Haid

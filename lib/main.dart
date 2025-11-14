@@ -12,7 +12,7 @@ import 'models/haid_record.dart';
 import 'constants/colors.dart';
 import 'pages/calendar_page.dart';
 import 'pages/settings_page.dart';
-import 'pages/articles_page.dart';
+import 'pages/articles_page.dart' as articles;
 import 'pages/wirid_and_dua_page.dart';
 
 final FikihService fikihService = FikihService();
@@ -506,7 +506,12 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
           // Logika baru untuk status Home Page
           if (current != null && current.endDate == null) {
             // Jika ada record aktif TAPI belum selesai (endDate == null)
-            _hukumStatus = 'HAID SEMENTARA';
+            final durationHours = DateTime.now().difference(current.startDate).inHours;
+            if (durationHours > 360) { // 15 hari
+              _hukumStatus = 'ISTIHADAH (Melebihi 15 Hari)';
+            } else {
+              _hukumStatus = 'HAID SEMENTARA';
+            }
           } else {
             // Jika tidak ada record aktif atau sudah selesai, hitung status final hari ini
             _hukumStatus =
@@ -762,14 +767,31 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
               // --- Header Salam ---
-              Text(
-                'Assalamualaikum, ${widget.userName}',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w800,
-                  color: primaryColor,
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.favorite,
+                    color: primaryColor,
+                    size: 28,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Assalamualaikum, ${widget.userName}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                      color: primaryColor,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Icon(
+                    Icons.favorite,
+                    color: primaryColor,
+                    size: 28,
+                  ),
+                ],
               ),
               const SizedBox(height: 8),
               const Text(
@@ -841,11 +863,11 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
                     _buildNavButton(context, 'assets/images/jadwal sholat.jpg',
-                        'Jadwal Salat', const PrayerTimesPage()),
-                    _buildNavButton(context, 'assets/images/artikel.jpg',
-                        'Artikel', const ArticlesPage()),
+                        'Prayer Schedules', const PrayerTimesPage()),
                     _buildNavButton(context, 'assets/images/wirid dan doa.jpg',
-                        'Wirid & Doa', const WiridAndDuaPage()),
+                        'Wirid', const WiridAndDuaPage()),
+                    _buildNavButton(context, 'assets/images/artikel.jpg',
+                        'Dua', const articles.DuaPage()),
                   ],
                 ),
               ),
@@ -1024,7 +1046,7 @@ class _NameInputScreenState extends State<NameInputScreen> {
             children: <Widget>[
               // Logo kecil di Onboarding
               Image.asset(
-                'assets/images/logo.jpg',
+                'assets/images/logo.apk.png',
                 height: 100,
                 width: 100,
               ),
@@ -1150,7 +1172,7 @@ class _SplashScreenState extends State<SplashScreen> {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(30),
                 child: Image.asset(
-                  'assets/images/logo.jpg',
+                  'assets/images/logo.apk.png',
                   height: 250,
                   width: 250,
                   fit: BoxFit.cover,

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-class ArticlesPage extends StatelessWidget {
-  const ArticlesPage({super.key});
+class DuaPage extends StatelessWidget {
+  const DuaPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -11,7 +11,7 @@ class ArticlesPage extends StatelessWidget {
         foregroundColor: Colors.white,
       ),
       body: const Center(
-        child: Text('Daftar artikel akan ditampilkan di sini.'),
+        child: Text('Kumpulan doa dan artikel islami untuk muslimah.'),
       ),
     );
   }

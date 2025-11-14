@@ -1,5 +1,3 @@
-// lib/pages/calendar_page.dart
-
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../models/haid_record.dart'; // Sesuaikan path-nya
@@ -92,13 +90,10 @@ class CalendarPage extends StatelessWidget {
     return [
       Positioned(
         bottom: 5,
-        child: Container(
-          width: 6,
-          height: 6,
-          decoration: BoxDecoration(
-            color: markerColor,
-            shape: BoxShape.circle,
-          ),
+        child: Icon(
+          Icons.favorite,
+          size: 8,
+          color: markerColor,
         ),
       ),
     ];
@@ -171,7 +166,7 @@ class CalendarPage extends StatelessWidget {
           ),
           ListTile(
             leading: Icon(Icons.circle, color: primaryColor.withOpacity(0.7)),
-            title: const Text('Prediksi Haid Mendatang (ML)'),
+            title: const Text('Prediksi Haid Mendatang'),
           ),
         ],
       ),

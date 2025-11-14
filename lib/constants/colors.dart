@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-// Kunci untuk menyimpan nama pengguna di SharedPreferences
 const String userNameKey = 'user_name';
 //DEFINISI WARNA APLIKASI (Pink Pastel & Tosca)
 const Color lightBackgroundColor = Color(0xFFFDE8E8);

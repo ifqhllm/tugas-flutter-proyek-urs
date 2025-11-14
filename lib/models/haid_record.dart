@@ -1,6 +1,5 @@
 import 'package:hive/hive.dart';
 
-// Penting: Nomor TypeId harus unik untuk setiap model Hive
 part 'haid_record.g.dart';
 
 @HiveType(typeId: 0)

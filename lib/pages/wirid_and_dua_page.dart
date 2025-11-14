@@ -7,7 +7,7 @@ class WiridAndDuaPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Wirid & Doa'),
+        title: const Text('Wirid dan Doa'),
         foregroundColor: Colors.white,
       ),
       body: const Center(
