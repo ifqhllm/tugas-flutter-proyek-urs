@@ -25,13 +25,13 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
   String _errorMessage = '';
 
   final Map<String, IconData> _prayerIcons = {
-    'Imsak': Icons.nightlight,
-    'Shubuh': Icons.nightlight_round,
-    'Terbit': Icons.wb_sunny,
+    'Imsak': Icons.star,
+    'Shubuh': Icons.brightness_2,
+    'Terbit': Icons.brightness_6,
     'Dhuhur': Icons.wb_sunny,
     'Ashar': Icons.wb_cloudy,
-    'Maghrib': Icons.terrain,
-    'Isya': Icons.nightlight,
+    'Maghrib': Icons.brightness_6,
+    'Isya': Icons.brightness_3,
   };
 
   @override
@@ -447,12 +447,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
                         Container(
                           padding: const EdgeInsets.all(20.0),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF1B5E20), // darker green
-                            image: const DecorationImage(
-                              image: AssetImage('assets/images/jadwal sholat.jpg'),
-                              fit: BoxFit.cover,
-                              opacity: 0.3,
-                            ),
+                            color: Colors.green,
                             borderRadius: BorderRadius.circular(15),
                             boxShadow: [
                               BoxShadow(
@@ -462,75 +457,87 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
                               ),
                             ],
                           ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          child: Column(
                             children: [
-                              Expanded(
-                                child: Column(
-                                  children: [
-                                    const Icon(
-                                      Icons.location_on,
-                                      color: Colors.white,
-                                      size: 32,
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      children: [
+                                        const Icon(
+                                          Icons.location_on,
+                                          color: Colors.white,
+                                          size: 32,
+                                        ),
+                                        const SizedBox(height: 8),
+                                        const Text(
+                                          'Lokasi Anda',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          _locationName,
+                                          textAlign: TextAlign.center,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                    const SizedBox(height: 8),
-                                    const Text(
-                                      'Lokasi Anda',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
+                                  ),
+                                  if (_nextPrayer.isNotEmpty)
+                                    Expanded(
+                                      child: Column(
+                                        children: [
+                                          const Text(
+                                            'Waktu Salat Selanjutnya',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            _nextPrayer,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 24,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            _formatDuration(_timeUntilNextPrayer),
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 32,
+                                              fontWeight: FontWeight.bold,
+                                              fontFeatures: [
+                                                FontFeature.tabularFigures()
+                                              ],
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      _locationName,
-                                      textAlign: TextAlign.center,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              const Center(
+                                child: Icon(
+                                  Icons.account_balance,
+                                  color: Colors.grey,
+                                  size: 40,
                                 ),
                               ),
-                              if (_nextPrayer.isNotEmpty)
-                                Expanded(
-                                  child: Column(
-                                    children: [
-                                      const Text(
-                                        'Waktu Salat Selanjutnya',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        _nextPrayer,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 24,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        _formatDuration(_timeUntilNextPrayer),
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 32,
-                                          fontWeight: FontWeight.bold,
-                                          fontFeatures: [
-                                            FontFeature.tabularFigures()
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
                             ],
                           ),
                         ),
