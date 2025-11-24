@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/background_widget.dart';
 
 class WiridAndDuaPage extends StatelessWidget {
   const WiridAndDuaPage({super.key});
@@ -6,12 +7,15 @@ class WiridAndDuaPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: const Text('Wirid dan Doa'),
-        foregroundColor: Colors.white,
+        foregroundColor: Colors.black,
       ),
-      body: const Center(
-        child: Text('Kumpulan wirid dan doa.'),
+      body: BackgroundWidget(
+        child: const Center(
+          child: Text('Kumpulan wirid dan doa.'),
+        ),
       ),
     );
   }

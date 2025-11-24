@@ -87,6 +87,11 @@ class HaidService {
     }
   }
 
+  Future<void> deleteCycle(HaidRecord record) async {
+    final box = await _openBox();
+    await box.delete(record.key);
+  }
+
   Future<void> clearAllRecords() async {
     final box = await _openBox();
     await box.clear();

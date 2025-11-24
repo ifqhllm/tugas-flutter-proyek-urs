@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../services/fikih_service.dart';
 import '../services/haid_service.dart';
+import '../services/notification_service.dart';
 import '../models/haid_record.dart';
 import '../constants/colors.dart';
+import '../widgets/background_widget.dart';
 import 'prayer_times_page.dart';
 import 'wirid_and_dua_page.dart';
 import 'articles_page.dart' as articles;
@@ -51,8 +53,10 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
           // Logika baru untuk status Home Page
           if (current != null && current.endDate == null) {
             // Jika ada record aktif TAPI belum selesai (endDate == null)
-            final durationHours = DateTime.now().difference(current.startDate).inHours;
-            if (durationHours > 360) { // 15 hari
+            final durationHours =
+                DateTime.now().difference(current.startDate).inHours;
+            if (durationHours > 360) {
+              // 15 hari
               _hukumStatus = 'ISTIHADAH (Melebihi 15 Hari)';
             } else {
               _hukumStatus = 'HAID SEMENTARA';
@@ -83,14 +87,16 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
     }
   }
 
-  Future<DateTime?> _selectDateAndTime(
-      BuildContext context, String title) async {
+  Future<DateTime?> _selectDateAndTime(BuildContext context, String title,
+      {bool allowFuture = false}) async {
     // 1. Pilih Tanggal (Date Picker)
     final DateTime? date = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
       firstDate: DateTime(2020),
-      lastDate: DateTime.now().add(const Duration(days: 30)),
+      lastDate: allowFuture
+          ? DateTime.now().add(const Duration(days: 30))
+          : DateTime.now(),
       helpText: title,
       fieldLabelText: 'Pilih Tanggal',
       builder: (context, child) {
@@ -155,6 +161,7 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
     final selectedDateTime = await _selectDateAndTime(
       context,
       'Tanggal Mulai Haid',
+      allowFuture: false,
     );
     if (selectedDateTime == null) return;
 
@@ -163,6 +170,9 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
     try {
       // Catat tanggal mulai Haid (Memulai siklus)
       await haidService.startHaid(selectedDateTime);
+
+      // Schedule daily recording reminder
+      await NotificationService().scheduleDailyRecordingReminder();
 
       await _loadCurrentRecord();
       ScaffoldMessenger.of(context).showSnackBar(
@@ -188,6 +198,7 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
     final selectedDateTime = await _selectDateAndTime(
       context,
       'Waktu Pencatatan Darah Saat Ini',
+      allowFuture: true,
     );
     if (selectedDateTime == null) return;
 
@@ -200,7 +211,7 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
       await _loadCurrentRecord();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('Pencatatan darah harian/jam-an berhasil disimpan.')),
+            content: Text('Pencatatan darah harian/jam berhasil disimpan.')),
       );
     } catch (e) {
       debugPrint("Error saat mencatat status darah: $e");
@@ -221,6 +232,7 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
     final selectedDateTime = await _selectDateAndTime(
       context,
       'Waktu Darah Benar-benar Berhenti',
+      allowFuture: true,
     );
     if (selectedDateTime == null) return;
 
@@ -229,6 +241,9 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
     try {
       // Panggil service untuk END FINAL (ini akan mengisi endDate dan memicu kalkulasi)
       await haidService.endHaidFinal(selectedDateTime);
+
+      // Cancel recording reminder
+      await NotificationService().cancelRecordingReminder();
 
       // Muat ulang data & trigger MainScreen update (untuk Calendar)
       await _loadCurrentRecord();
@@ -291,363 +306,432 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
   Widget build(BuildContext context) {
     final isHaidActive =
         _currentRecord != null && _currentRecord!.endDate == null;
-    final primaryBgColor = primaryColor;
 
-    return SafeArea(
-      child: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              // --- Header Salam ---
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.favorite,
-                    color: primaryColor,
-                    size: 28,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Assalamualaikum, ${widget.userName}',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w800,
-                      color: primaryColor,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  const Icon(
-                    Icons.favorite,
-                    color: primaryColor,
-                    size: 28,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Bagaimana keadaan Anda hari ini?',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16, color: textColor),
-              ),
-              const SizedBox(height: 25),
-
-              // --- Status Hukum Hari Ini Card ---
-              Container(
-                padding: const EdgeInsets.all(20.0),
-                decoration: BoxDecoration(
-                  color: primaryBgColor,
-                  borderRadius: BorderRadius.circular(15),
-                  boxShadow: [
-                    BoxShadow(
-                      color: primaryBgColor.withOpacity(0.3),
-                      spreadRadius: 2,
-                      blurRadius: 10,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    const Text(
-                      'STATUS HUKUM HAID PERIODE INI',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      _isLoading ? 'Menghitung...' : _hukumStatus.toUpperCase(),
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
-                        height: 1.2,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      _hukumStatus == 'HAID SEMENTARA'
-                          ? 'Silakan catat peristiwa darah harian/jam-an. Status final akan dihitung setelah Darah Berhenti.'
-                          : _hukumStatus == 'HAID' ||
-                                  _hukumStatus == 'ISTIHADAH'
-                              ? 'Ada pengecualian ibadah.'
-                              : 'Jika Anda Suci maka wajib qodho sholat. jika istihadah silahkan baca artikel mengenai hukumnya!',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Colors.white70,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 25),
-
-              // --- MENU CEPAT (3 Tombol Gambar) ---
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildNavButton(context, 'assets/images/jadwal sholat.jpg',
-                        'Jadwal Shalat', const PrayerTimesPage()),
-                    _buildNavButton(context, 'assets/images/wirid dan doa.jpg',
-                        'Wirid & Doa', const WiridAndDuaPage()),
-                    _buildNavButton(context, 'assets/images/artikel.jpg',
-                        'Artikel', const articles.DuaPage()),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 25),
-
-              // --- Tombol Pencatatan Siklus (Dipecah) ---
-              if (_isLoading)
-                const Center(
-                  child: CircularProgressIndicator(color: primaryColor),
-                )
-              else if (isHaidActive)
-                // KONDISI 1: Siklus sedang aktif (HAID SEMENTARA)
+    return BackgroundWidget(
+      child: SafeArea(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                // --- Header Salam ---
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Tombol 1A: Mencatat Darah Masih Keluar (Event Harian)
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: _logBloodEvent, // PANGGIL FUNGSI LOG EVENT
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: primaryColor.withOpacity(0.8),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(15)),
-                          elevation: 3,
-                        ),
-                        child: const Text(
-                          'CATAT DARAH HARI INI/JAM INI',
-                          style: TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.bold),
-                        ),
-                      ),
+                    const Icon(
+                      Icons.woman,
+                      color: secondaryColor,
+                      size: 28,
                     ),
-                    const SizedBox(width: 10),
-
-                    // Tombol 1B: Akhir Final (Memicu Perhitungan Fiqh)
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: _endHaidFinal, // PANGGIL FUNGSI END FINAL
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: secondaryColor,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(15)),
-                          elevation: 5,
-                        ),
-                        child: const Text(
-                          'DARAH SUDAH BERHENTI KELUAR',
-                          style: TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ),
-                  ],
-                )
-              else
-                // KONDISI 2: Siklus tidak aktif atau sudah selesai
-                ElevatedButton(
-                  onPressed: _startHaidCycle, // PANGGIL FUNGSI START
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 18),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15)),
-                    elevation: 5,
-                  ),
-                  child: const Text(
-                    'CATAT HAID SEKARANG',
-                    style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white),
-                  ),
-                ),
-
-              const SizedBox(height: 20),
-
-              // --- Prediksi Siklus Card ---
-              Container(
-                padding: const EdgeInsets.all(20.0),
-                decoration: BoxDecoration(
-                  color: primaryBgColor,
-                  borderRadius: BorderRadius.circular(15),
-                  border: Border.all(color: primaryColor.withOpacity(0.5)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.withOpacity(0.1),
-                      spreadRadius: 1,
-                      blurRadius: 5,
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'PREDIKSI SIKLUS BERIKUTNYA',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
+                    const SizedBox(width: 8),
                     Text(
-                      _isLoading
-                          ? 'Memuat data prediksi...'
-                          : _nextPredictedDate == null
-                              ? 'Data kurang untuk prediksi akurat.'
-                              : 'Prediksi Haid: ${_nextPredictedDate!.day}/${_nextPredictedDate!.month}/${_nextPredictedDate!.year}',
+                      'Assalamualaikum, ${widget.userName}',
                       textAlign: TextAlign.center,
                       style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        fontSize: 25,
+                        fontWeight: FontWeight.w800,
+                        color: secondaryColor,
                       ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Icon(
+                      Icons.woman,
+                      color: secondaryColor,
+                      size: 28,
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 25),
+                const SizedBox(height: 8),
+                const Text(
+                  'Bagaimana keadaan Anda hari ini?',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 16, color: textColor),
+                ),
+                const SizedBox(height: 25),
 
-              // --- RIWAYAT SIKLUS ---
-              Container(
-                padding: const EdgeInsets.all(20.0),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(15),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.withOpacity(0.1),
-                      spreadRadius: 1,
-                      blurRadius: 5,
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'RIWAYAT SIKLUS',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: primaryColor,
-                        fontWeight: FontWeight.w700,
+                // --- Status Hukum Hari Ini Card ---
+                Container(
+                  padding: const EdgeInsets.all(20.0),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(15),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.3),
+                        spreadRadius: 2,
+                        blurRadius: 10,
+                        offset: const Offset(0, 5),
                       ),
-                    ),
-                    const SizedBox(height: 10),
-                    if (_allRecords.isEmpty)
+                    ],
+                  ),
+                  child: Column(
+                    children: [
                       const Text(
-                        'Belum ada riwayat siklus.',
-                        style: TextStyle(color: textColor),
-                      )
-                    else
-                      ..._allRecords.reversed.take(5).map((record) {
-                        final start = '${record.startDate.day}/${record.startDate.month}/${record.startDate.year}';
-                        final end = record.endDate != null
-                            ? '${record.endDate!.day}/${record.endDate!.month}/${record.endDate!.year}'
-                            : 'Sedang berlangsung';
+                        'Status Hukum Haid Periode Ini:',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.black,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        _isLoading
+                            ? 'Menghitung...'
+                            : _hukumStatus.toUpperCase(),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 25,
+                          fontWeight: FontWeight.w900,
+                          color: secondaryColor,
+                          height: 1.2,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        _hukumStatus == 'HAID SEMENTARA'
+                            ? 'Silakan catat peristiwa darah harian/jam-an. Status final akan dihitung setelah Darah Berhenti.'
+                            : _hukumStatus == 'HAID' ||
+                                    _hukumStatus == 'ISTIHADAH'
+                                ? 'Ada pengecualian ibadah.'
+                                : 'Jika Anda Suci maka wajib qodho sholat. jika istihadah silahkan baca artikel mengenai hukumnya!',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 25),
 
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: primaryColor.withOpacity(0.3)),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.grey.withOpacity(0.1),
-                                blurRadius: 5,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
+                // --- MENU CEPAT (3 Tombol Gambar) ---
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildNavButton(
+                          context,
+                          'assets/images/jadwal sholat.jpg',
+                          'Jadwal Shalat',
+                          const PrayerTimesPage()),
+                      _buildNavButton(
+                          context,
+                          'assets/images/wirid dan doa.jpg',
+                          'Wirid & Doa',
+                          const WiridAndDuaPage()),
+                      _buildNavButton(context, 'assets/images/artikel.jpg',
+                          'Artikel', const articles.DuaPage()),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 25),
+
+                // --- Tombol Pencatatan Siklus (Dipecah) ---
+                if (_isLoading)
+                  const Center(
+                    child: CircularProgressIndicator(color: primaryColor),
+                  )
+                else if (isHaidActive)
+                  // KONDISI 1: Siklus sedang aktif (HAID SEMENTARA)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      // Tombol 1A: Mencatat Darah Masih Keluar (Event Harian)
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: _logBloodEvent, // PANGGIL FUNGSI LOG EVENT
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: primaryColor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(15)),
+                            elevation: 3,
                           ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Siklus: $start - $end',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  color: primaryColor,
-                                  fontWeight: FontWeight.bold,
+                          child: const Text(
+                            'Catat darah hari/jam ini',
+                            style: TextStyle(
+                                fontSize: 15, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+
+                      // Tombol 1B: Akhir Final (Memicu Perhitungan Fiqh)
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: _endHaidFinal, // PANGGIL FUNGSI END FINAL
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: primaryColor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(15)),
+                            elevation: 5,
+                          ),
+                          child: const Text(
+                            'Akhiri haid',
+                            style: TextStyle(
+                                fontSize: 15, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                else
+                  // KONDISI 2: Siklus tidak aktif atau sudah selesai
+                  ElevatedButton(
+                    onPressed: _startHaidCycle, // PANGGIL FUNGSI START
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFFF69B4),
+                      foregroundColor: Colors.black,
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(15)),
+                      elevation: 5,
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.add),
+                        SizedBox(width: 8),
+                        Text(
+                          'CATAT HAID SEKARANG',
+                          style: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                const SizedBox(height: 20),
+
+                // --- Prediksi Siklus Card ---
+                Container(
+                  padding: const EdgeInsets.all(20.0),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(15),
+                    border: Border.all(color: Colors.white),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.1),
+                        spreadRadius: 1,
+                        blurRadius: 5,
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Prediksi siklus berikutnya',
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: Colors.black,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _isLoading
+                            ? 'Memuat data prediksi...'
+                            : _nextPredictedDate == null
+                                ? 'Data kurang untuk prediksi akurat.'
+                                : 'Prediksi Haid: ${_nextPredictedDate!.day}/${_nextPredictedDate!.month}/${_nextPredictedDate!.year}',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: secondaryColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 25),
+
+                // --- RIWAYAT SIKLUS ---
+                Container(
+                  padding: const EdgeInsets.all(20.0),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(15),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.1),
+                        spreadRadius: 1,
+                        blurRadius: 5,
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'RIWAYAT SIKLUS',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.black,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      if (_allRecords.isEmpty)
+                        const Text(
+                          'Belum ada riwayat siklus.',
+                          style: TextStyle(color: textColor),
+                        )
+                      else
+                        ..._allRecords.reversed.take(5).map((record) {
+                          final start =
+                              '${record.startDate.day}/${record.startDate.month}/${record.startDate.year}';
+                          final end = record.endDate != null
+                              ? '${record.endDate!.day}/${record.endDate!.month}/${record.endDate!.year}'
+                              : 'Sedang berlangsung';
+
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.white),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.grey.withOpacity(0.1),
+                                  blurRadius: 5,
+                                  offset: const Offset(0, 2),
                                 ),
-                              ),
-                              const SizedBox(height: 8),
-                              ...record.bloodEvents.map((event) {
-                                final eventTime = '${event.timestamp.day}/${event.timestamp.month}/${event.timestamp.year} ${event.timestamp.hour}:${event.timestamp.minute.toString().padLeft(2, '0')}';
-                                return Padding(
-                                  padding: const EdgeInsets.only(bottom: 4.0),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          '$eventTime - ${event.type}',
-                                          style: const TextStyle(
-                                            fontSize: 14,
-                                            color: textColor,
-                                          ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        'Siklus: $start - $end',
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          color: secondaryColor,
+                                          fontWeight: FontWeight.bold,
                                         ),
                                       ),
-                                      IconButton(
-                                        icon: const Icon(Icons.delete, size: 16, color: Colors.red),
-                                        onPressed: () async {
-                                          final confirm = await showDialog<bool>(
-                                            context: context,
-                                            builder: (context) => AlertDialog(
-                                              title: const Text('Hapus Pencatatan'),
-                                              content: const Text('Apakah Anda yakin ingin menghapus pencatatan darah ini?'),
-                                              actions: [
-                                                TextButton(
-                                                  onPressed: () => Navigator.of(context).pop(false),
-                                                  child: const Text('Batal'),
-                                                ),
-                                                TextButton(
-                                                  onPressed: () => Navigator.of(context).pop(true),
-                                                  child: const Text('Hapus'),
-                                                ),
-                                              ],
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.delete,
+                                          size: 20, color: primaryColor),
+                                      onPressed: () async {
+                                        final confirm = await showDialog<bool>(
+                                          context: context,
+                                          builder: (context) => AlertDialog(
+                                            title: const Text('Hapus Siklus'),
+                                            content: const Text(
+                                                'Apakah Anda yakin ingin menghapus seluruh siklus ini? Semua data terkait akan hilang.'),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () =>
+                                                    Navigator.of(context)
+                                                        .pop(false),
+                                                child: const Text('Batal'),
+                                              ),
+                                              TextButton(
+                                                onPressed: () =>
+                                                    Navigator.of(context)
+                                                        .pop(true),
+                                                child: const Text('Hapus'),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                        if (confirm == true) {
+                                          await haidService.deleteCycle(record);
+                                          await _loadCurrentRecord();
+                                        }
+                                      },
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                ...record.bloodEvents.map((event) {
+                                  final eventTime =
+                                      '${event.timestamp.day}/${event.timestamp.month}/${event.timestamp.year} ${event.timestamp.hour}:${event.timestamp.minute.toString().padLeft(2, '0')}';
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 4.0),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            '$eventTime - ${event.type}',
+                                            style: const TextStyle(
+                                              fontSize: 14,
+                                              color: textColor,
                                             ),
-                                          );
-                                          if (confirm == true) {
-                                            final eventIndex = record.bloodEvents.indexOf(event);
-                                            await haidService.deleteBloodEvent(record, eventIndex);
-                                            await _loadCurrentRecord();
-                                          }
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              }).toList(),
-                            ],
-                          ),
-                        );
-                      }),
-                  ],
+                                          ),
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(Icons.delete,
+                                              size: 16, color: primaryColor),
+                                          onPressed: () async {
+                                            final confirm =
+                                                await showDialog<bool>(
+                                              context: context,
+                                              builder: (context) => AlertDialog(
+                                                title: const Text(
+                                                    'Hapus Pencatatan'),
+                                                content: const Text(
+                                                    'Apakah Anda yakin ingin menghapus pencatatan darah ini?'),
+                                                actions: [
+                                                  TextButton(
+                                                    onPressed: () =>
+                                                        Navigator.of(context)
+                                                            .pop(false),
+                                                    child: const Text('Batal'),
+                                                  ),
+                                                  TextButton(
+                                                    onPressed: () =>
+                                                        Navigator.of(context)
+                                                            .pop(true),
+                                                    child: const Text('Hapus'),
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                            if (confirm == true) {
+                                              final eventIndex = record
+                                                  .bloodEvents
+                                                  .indexOf(event);
+                                              await haidService
+                                                  .deleteBloodEvent(
+                                                      record, eventIndex);
+                                              await _loadCurrentRecord();
+                                            }
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }).toList(),
+                              ],
+                            ),
+                          );
+                        }),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 50),
-            ],
+                const SizedBox(height: 50),
+              ],
+            ),
           ),
         ),
       ),

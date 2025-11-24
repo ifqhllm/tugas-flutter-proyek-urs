@@ -10,7 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  
+
   # Packages yang Sudah Ada
   shared_preferences: ^2.2.3 # Untuk menyimpan nama pengguna
   http: ^1.2.1               # Untuk integrasi API waktu salat
@@ -21,6 +21,9 @@ dependencies:
   hive_flutter: ^1.1.0       # Integrasi Hive dengan Flutter
   intl: ^0.19.0              # Untuk format tanggal dan lokal bahasa Indonesia
   geolocator: ^12.0.0        # Untuk mendapatkan lokasi pengguna
+  flutter_local_notifications: ^17.2.2 # Untuk notifikasi lokal
+  timezone: ^0.9.4           # Untuk scheduling notifikasi dengan timezone
+  url_launcher: ^6.2.3       # Untuk membuka WhatsApp
 
 dev_dependencies:
   flutter_test:

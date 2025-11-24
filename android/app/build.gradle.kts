@@ -13,6 +13,7 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
@@ -37,6 +38,12 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+}
+
+dependencies {
+    // Pastikan baris ini ada di dalam blok dependencies {}
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4") 
+    // Anda bisa coba versi yang lebih baru jika 2.0.4 bermasalah
 }
 
 flutter {
