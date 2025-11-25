@@ -231,8 +231,8 @@ class _SplashScreenState extends State<SplashScreen> {
                       begin: Alignment.centerLeft,
                       end: Alignment.centerRight,
                       colors: [
-                        const Color.fromARGB(255, 250, 229, 236).withOpacity(1.0),
-                        const Color.fromARGB(255, 234, 203, 253).withOpacity(0.8),
+                        const Color.fromARGB(255, 250, 229, 236).withValues(alpha: 1.0),
+                        const Color.fromARGB(255, 234, 203, 253).withValues(alpha: 0.8),
                       ],
                     ).createShader(bounds);
                   },
@@ -445,8 +445,8 @@ class _MainScreenState extends State<MainScreen> {
                         begin: Alignment.centerLeft,
                         end: Alignment.centerRight,
                         colors: [
-                          const Color.fromARGB(255, 250, 229, 236).withOpacity(1.0),
-                          const Color.fromARGB(255, 234, 203, 253).withOpacity(0.8),
+                          const Color.fromARGB(255, 250, 229, 236).withValues(alpha: 1.0),
+                          const Color.fromARGB(255, 234, 203, 253).withValues(alpha: 0.8),
                         ],
                       ).createShader(bounds);
                     },

@@ -71,15 +71,15 @@ class _CalendarPageState extends State<CalendarPage> {
                   fontSize: 18, fontWeight: FontWeight.bold, color: textColor),
             ),
             const ListTile(
-              leading: Icon(Icons.circle, color: Colors.red),
-              title: Text('Tanggal Haid (Riwayat Final)'),
+              leading: const Icon(Icons.circle, color: Colors.red),
+              title: const Text('Tanggal Haid (Riwayat Final)'),
             ),
-            ListTile(
-              leading: Icon(Icons.circle, color: Colors.green),
+            const ListTile(
+              leading: const Icon(Icons.circle, color: Colors.green),
               title: const Text('Tanggal Istihadah (Riwayat Final)'),
             ),
-            ListTile(
-              leading: Icon(Icons.circle, color: Colors.pink),
+            const ListTile(
+              leading: const Icon(Icons.circle, color: Colors.pink),
               title: const Text('Prediksi Haid Mendatang'),
             ),
           ],

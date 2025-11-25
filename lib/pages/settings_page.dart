@@ -4,7 +4,7 @@ import '../constants/colors.dart';
 import '../main.dart';
 import '../services/notification_service.dart';
 import '../widgets/background_widget.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/services.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -106,55 +106,62 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   void _showFeedbackDialog(BuildContext context) {
-    final TextEditingController nameController = TextEditingController();
-    final TextEditingController feedbackController = TextEditingController();
-
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Beri Masukan'),
+        title: const Text('Hubungi Kami'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(labelText: 'Nama:'),
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'WhatsApp: 081918151339',
+                    style: TextStyle(fontSize: 16),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.copy),
+                  onPressed: () async {
+                    await Clipboard.setData(const ClipboardData(text: '081918151339'));
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Nomor WhatsApp berhasil disalin')),
+                      );
+                    }
+                  },
+                ),
+              ],
             ),
-            TextField(
-              controller: feedbackController,
-              decoration: const InputDecoration(labelText: 'Masukan:'),
-              maxLines: 3,
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Email: ifqohululum@gmail.com',
+                    style: TextStyle(fontSize: 16),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.copy),
+                  onPressed: () async {
+                    await Clipboard.setData(const ClipboardData(text: 'ifqohululum@gmail.com'));
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Email berhasil disalin')),
+                      );
+                    }
+                  },
+                ),
+              ],
             ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final name = nameController.text.trim();
-              final feedback = feedbackController.text.trim();
-              if (name.isEmpty || feedback.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Nama dan Masukan harus diisi')),
-                );
-                return;
-              }
-              final message = 'Nama: $name\nMasukan: $feedback';
-              final url =
-                  'whatsapp://send?phone=6281918151339&text=${Uri.encodeComponent(message)}';
-              if (await canLaunchUrl(Uri.parse(url))) {
-                await launchUrl(Uri.parse(url));
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Tidak dapat membuka WhatsApp')),
-                );
-              }
-              Navigator.of(context).pop();
-            },
-            child: const Text('Kirim'),
+            child: const Text('Tutup'),
           ),
         ],
       ),
@@ -185,7 +192,6 @@ class _SettingsPageState extends State<SettingsPage> {
                   const Text('Dapatkan notifikasi saat waktu shalat tiba'),
               value: _prayerNotificationsEnabled,
               onChanged: _updatePrayerNotifications,
-              activeColor: const Color.fromARGB(255, 29, 202, 250),
             ),
             SwitchListTile(
               title: const Text('Pengingat Pencatatan Harian',
@@ -194,7 +200,6 @@ class _SettingsPageState extends State<SettingsPage> {
                   const Text('Pengingat harian untuk mencatat siklus haid'),
               value: _recordingReminderEnabled,
               onChanged: _updateRecordingReminder,
-              activeColor: const Color.fromARGB(255, 29, 202, 250),
             ),
             const Divider(),
             ListTile(

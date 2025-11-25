@@ -246,10 +246,12 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
         _startCountdown();
         _schedulePrayerNotifications();
       } else {
-        setState(() {
-          _errorMessage =
-              'Gagal mengambil data jadwal salat. Periksa koneksi internet.';
-        });
+        if (_prayerTimes.isEmpty) {
+          setState(() {
+            _errorMessage =
+                'Gagal mengambil data jadwal salat. Periksa koneksi internet.';
+          });
+        }
       }
     } catch (e) {
       String errorMsg = 'Terjadi kesalahan: ${e.toString()}';
@@ -258,9 +260,11 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
         errorMsg =
             'Tidak ada koneksi internet. Jadwal salat memerlukan koneksi untuk perhitungan awal.';
       }
-      setState(() {
-        _errorMessage = errorMsg;
-      });
+      if (_prayerTimes.isEmpty) {
+        setState(() {
+          _errorMessage = errorMsg;
+        });
+      }
     } finally {
       setState(() {
         _isLoading = false;
@@ -447,20 +451,14 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
                         Container(
                           padding: const EdgeInsets.all(20.0),
                           decoration: BoxDecoration(
-                            color: Colors.green,
+                            color: const Color.fromARGB(255, 143, 244, 146),
                             borderRadius: BorderRadius.circular(15),
-                            boxShadow: [
-                              BoxShadow(
-                                color: primaryColor.withValues(alpha: 77),
-                                blurRadius: 10,
-                                offset: const Offset(0, 5),
-                              ),
-                            ],
                           ),
                           child: Column(
                             children: [
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceEvenly,
                                 children: [
                                   Expanded(
                                     child: Column(
@@ -515,7 +513,8 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
                                           ),
                                           const SizedBox(height: 8),
                                           Text(
-                                            _formatDuration(_timeUntilNextPrayer),
+                                            _formatDuration(
+                                                _timeUntilNextPrayer),
                                             style: const TextStyle(
                                               color: Colors.white,
                                               fontSize: 32,
@@ -580,8 +579,11 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
                                 child: Row(
                                   children: [
                                     Icon(
-                                      _prayerIcons[entry.key] ?? Icons.access_time,
-                                      color: isNextPrayer ? secondaryColor : Colors.black,
+                                      _prayerIcons[entry.key] ??
+                                          Icons.access_time,
+                                      color: isNextPrayer
+                                          ? secondaryColor
+                                          : Colors.black,
                                       size: 28,
                                     ),
                                     const SizedBox(width: 12),
@@ -601,7 +603,9 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
                                       style: TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold,
-                                        color: isNextPrayer ? secondaryColor : Colors.black,
+                                        color: isNextPrayer
+                                            ? secondaryColor
+                                            : Colors.black,
                                       ),
                                     ),
                                   ],

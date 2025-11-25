@@ -12,8 +12,8 @@ class DuaPage extends StatelessWidget {
         title: const Text('Artikel'),
         foregroundColor: Colors.black,
       ),
-      body: BackgroundWidget(
-        child: const Center(
+      body: const BackgroundWidget(
+        child: Center(
           child: Text('Kumpulan artikel islami untuk muslimah.'),
         ),
       ),

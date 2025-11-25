@@ -116,6 +116,7 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
       },
     );
 
+    if (!mounted) return null;
     if (date == null) return null;
 
     // 2. Pilih Jam (Time Picker)
@@ -140,6 +141,7 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
       },
     );
 
+    if (!mounted) return null;
     if (time == null) {
       return null;
     }
@@ -175,15 +177,19 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
       await NotificationService().scheduleDailyRecordingReminder();
 
       await _loadCurrentRecord();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Pencatatan Haid Dimulai! Status: HAID SEMENTARA.')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Pencatatan Haid Dimulai! Status: HAID SEMENTARA.')),
+        );
+      }
     } catch (e) {
       debugPrint("Error saat memulai haid: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal memulai pencatatan: ${e.toString()}')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal memulai pencatatan: ${e.toString()}')),
+        );
+      }
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -209,15 +215,19 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
       await haidService.logBloodEvent(selectedDateTime, 'CONTINUE_FLOW');
 
       await _loadCurrentRecord();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Pencatatan darah harian/jam berhasil disimpan.')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Pencatatan darah harian/jam berhasil disimpan.')),
+        );
+      }
     } catch (e) {
       debugPrint("Error saat mencatat status darah: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal mencatat status darah: ${e.toString()}')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal mencatat status darah: ${e.toString()}')),
+        );
+      }
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -248,15 +258,19 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
       // Muat ulang data & trigger MainScreen update (untuk Calendar)
       await _loadCurrentRecord();
       await widget.onDataChanged?.call();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Siklus diakhiri. Status Hukum Final dihitung.')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Siklus diakhiri. Status Hukum Final dihitung.')),
+        );
+      }
     } catch (e) {
       debugPrint("Error saat mengakhiri siklus: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal mengakhiri siklus: ${e.toString()}')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal mengakhiri siklus: ${e.toString()}')),
+        );
+      }
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -358,7 +372,7 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                     borderRadius: BorderRadius.circular(15),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.grey.withOpacity(0.3),
+                        color: Colors.grey.withValues(alpha: 0.3),
                         spreadRadius: 2,
                         blurRadius: 10,
                         offset: const Offset(0, 5),
@@ -519,7 +533,7 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                     border: Border.all(color: Colors.white),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.grey.withOpacity(0.1),
+                        color: Colors.grey.withValues(alpha: 0.1),
                         spreadRadius: 1,
                         blurRadius: 5,
                       ),
@@ -563,7 +577,7 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                     borderRadius: BorderRadius.circular(15),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.grey.withOpacity(0.1),
+                        color: Colors.grey.withValues(alpha: 0.1),
                         spreadRadius: 1,
                         blurRadius: 5,
                       ),
