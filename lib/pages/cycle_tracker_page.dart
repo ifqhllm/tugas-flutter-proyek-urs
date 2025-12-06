@@ -8,6 +8,7 @@ import '../widgets/background_widget.dart';
 import 'prayer_times_page.dart';
 import 'wirid_and_dua_page.dart';
 import 'articles_page.dart' as articles;
+import 'qa_page.dart';
 
 final FikihService fikihService = FikihService();
 final HaidService haidService = HaidService();
@@ -180,7 +181,8 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text('Pencatatan Haid Dimulai! Status: HAID SEMENTARA.')),
+              content:
+                  Text('Pencatatan Haid Dimulai! Status: HAID SEMENTARA.')),
         );
       }
     } catch (e) {
@@ -225,7 +227,8 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
       debugPrint("Error saat mencatat status darah: $e");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal mencatat status darah: ${e.toString()}')),
+          SnackBar(
+              content: Text('Gagal mencatat status darah: ${e.toString()}')),
         );
       }
     } finally {
@@ -367,24 +370,12 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                 // --- Status Hukum Hari Ini Card ---
                 Container(
                   padding: const EdgeInsets.all(20.0),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(15),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.withValues(alpha: 0.3),
-                        spreadRadius: 2,
-                        blurRadius: 10,
-                        offset: const Offset(0, 5),
-                      ),
-                    ],
-                  ),
                   child: Column(
                     children: [
                       const Text(
                         'Status Hukum Haid Periode Ini:',
                         style: TextStyle(
-                          fontSize: 16,
+                          fontSize: 20,
                           color: Colors.black,
                           fontWeight: FontWeight.w600,
                         ),
@@ -398,7 +389,7 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                         style: const TextStyle(
                           fontSize: 25,
                           fontWeight: FontWeight.w900,
-                          color: secondaryColor,
+                          color: textColor,
                           height: 1.2,
                         ),
                       ),
@@ -421,11 +412,11 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                 ),
                 const SizedBox(height: 25),
 
-                // --- MENU CEPAT (3 Tombol Gambar) ---
+                // --- MENU CEPAT (4 Tombol Gambar) ---
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 0),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       _buildNavButton(
                           context,
@@ -439,6 +430,8 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                           const WiridAndDuaPage()),
                       _buildNavButton(context, 'assets/images/artikel.jpg',
                           'Artikel', const articles.DuaPage()),
+                      _buildNavButton(context, 'assets/images/logo.apk.png',
+                          'Tanya Jawab', const QAPage()),
                     ],
                   ),
                 ),

@@ -2,8 +2,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
-import '../constants/colors.dart';
-
+import 'package:flutter/material.dart'; 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
@@ -14,44 +13,61 @@ class NotificationService {
 
   Future<void> init() async {
     tz.initializeTimeZones();
+    try {
+      tz.setLocalLocation(tz.getLocation('Asia/Jakarta'));
+    } catch (e) {
+      debugPrint('Error setting timezone, defaulting to local: $e');
+      tz.setLocalLocation(tz.local);
+    }
 
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
+    const DarwinInitializationSettings initializationSettingsDarwin =
+        DarwinInitializationSettings(
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
+    );
+
     const InitializationSettings initializationSettings =
-        InitializationSettings(android: initializationSettingsAndroid);
+        InitializationSettings(
+      android: initializationSettingsAndroid,
+      iOS: initializationSettingsDarwin,
+      macOS: initializationSettingsDarwin,
+    );
 
     await flutterLocalNotificationsPlugin.initialize(
       initializationSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
-        // Handle notification tap - open app
-        // This will automatically open the app
+        debugPrint('Notification tapped with payload: ${response.payload}');
       },
     );
 
-    // Request permissions for Android 13+
     final androidPlugin = flutterLocalNotificationsPlugin
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
 
     if (androidPlugin != null) {
       await androidPlugin.requestNotificationsPermission();
-      // Create notification channels
+      
       await androidPlugin.createNotificationChannel(
         const AndroidNotificationChannel(
           'prayer_channel',
-          'Prayer Times',
-          description: 'Notifications for prayer times',
-          importance: Importance.high,
+          'Waktu Shalat',
+          description: 'Notifikasi untuk waktu shalat (Adzan)',
+          importance: Importance.max, // Penting agar notifikasi muncul sebagai Heads-up
           playSound: true,
           enableVibration: true,
+          sound: RawResourceAndroidNotificationSound('azan'), // Ganti 'azan' jika Anda memiliki file suara kustom
         ),
       );
+      
       await androidPlugin.createNotificationChannel(
         const AndroidNotificationChannel(
           'reminder_channel',
-          'Recording Reminders',
-          description: 'Daily reminders for recording',
+          'Pengingat Harian',
+          description: 'Pengingat rutin untuk pencatatan harian',
           importance: Importance.high,
           playSound: true,
           enableVibration: true,
@@ -59,72 +75,121 @@ class NotificationService {
       );
     }
   }
+  
+  Future<void> cancelPrayerNotifications() async {
+    final List<PendingNotificationRequest> pending =
+        await flutterLocalNotificationsPlugin.pendingNotificationRequests();
+    
+    for (var notification in pending) {
+      if (notification.id != 999999) {
+        await flutterLocalNotificationsPlugin.cancel(notification.id);
+        debugPrint('Canceled prayer notification ID: ${notification.id}');
+      }
+    }
+  }
 
-  Future<void> schedulePrayerNotification(
-      String prayerName, DateTime prayerTime) async {
+  Future<void> cancelRecordingReminder() async {
+    await flutterLocalNotificationsPlugin.cancel(999999);
+  }
+
+  Future<void> cancelAllNotifications() async {
+    await flutterLocalNotificationsPlugin.cancelAll();
+  }
+
+  Future<void> _scheduleSinglePrayerNotification(
+      String prayerName, DateTime prayerTime, int notificationId) async {
+    
+    
     final prefs = await SharedPreferences.getInstance();
     final notificationsEnabled = prefs.getBool('prayer_notifications') ?? true;
 
     if (!notificationsEnabled) return;
 
     final now = DateTime.now();
-    if (prayerTime.isBefore(now)) return; // Don't schedule past prayers
+    if (prayerTime.isBefore(now)) return; 
+
+    final scheduledTime = tz.TZDateTime.from(prayerTime, tz.local);
 
     await flutterLocalNotificationsPlugin.zonedSchedule(
-      prayerName.hashCode, // Unique ID
+      notificationId, // Menggunakan ID yang dilewatkan
       'Waktu Shalat $prayerName',
       'Saatnya melaksanakan shalat $prayerName',
-      tz.TZDateTime.from(prayerTime, tz.local),
+      scheduledTime,
       const NotificationDetails(
         android: AndroidNotificationDetails(
           'prayer_channel',
-          'Prayer Times',
-          channelDescription: 'Notifications for prayer times',
-          importance: Importance.high,
-          priority: Priority.high,
-          sound: RawResourceAndroidNotificationSound('default'),
+          'Waktu Shalat',
+          channelDescription: 'Notifikasi untuk waktu shalat',
+          importance: Importance.max,
+          priority: Priority.max,
           enableVibration: true,
         ),
       ),
       androidAllowWhileIdle: true,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
-      matchDateTimeComponents: DateTimeComponents.time,
     );
+    debugPrint('Scheduled $prayerName (ID: $notificationId) at $scheduledTime');
   }
 
+  Future<void> scheduleAllPrayersForTheDay(Map<String, DateTime> allPrayerTimes) async {
+    
+    await cancelPrayerNotifications(); 
+
+    final Map<String, int> prayerIdMap = {
+      'Shubuh': 1, 'Dhuhur': 2, 'Ashar': 3, 'Maghrib': 4, 'Isya': 5,
+    };
+
+    int scheduledCount = 0;
+    
+    // B. Loop dan Jadwalkan setiap waktu shalat
+    allPrayerTimes.forEach((name, time) {
+      final notificationId = prayerIdMap[name] ?? name.hashCode;
+      _scheduleSinglePrayerNotification(name, time, notificationId);
+      scheduledCount++;
+    });
+    
+    debugPrint('Total ${scheduledCount} notifikasi shalat dijadwalkan ulang.');
+  }
+
+  
   Future<void> scheduleDailyRecordingReminder() async {
+    
+    await cancelRecordingReminder(); 
+
     final prefs = await SharedPreferences.getInstance();
     final notificationsEnabled = prefs.getBool('recording_reminder') ?? true;
-    final userName = prefs.getString(userNameKey) ?? 'Pengguna';
+    const int reminderId = 999999;
+    
+    const String userNameKey = 'user_name'; 
+    final userName = prefs.getString(userNameKey) ?? 'Pengguna'; 
 
     if (!notificationsEnabled) return;
 
-    // Schedule for Fajr time (assume 5:00 AM)
-    final now = DateTime.now();
-    final fajrTime = DateTime(now.year, now.month, now.day, 5, 0);
+    final now = tz.TZDateTime.now(tz.local);
+    var scheduledTime = tz.TZDateTime(tz.local, now.year, now.month, now.day, 5, 0);
 
-    // If already passed today, schedule for tomorrow
-    final scheduledTime = fajrTime.isBefore(now)
-        ? fajrTime.add(const Duration(days: 1))
-        : fajrTime;
+    if (scheduledTime.isBefore(now)) {
+      scheduledTime = scheduledTime.add(const Duration(days: 1));
+    }
 
     await flutterLocalNotificationsPlugin.zonedSchedule(
-      999999, // Unique ID for recording reminder
+      reminderId, // ID Unik untuk reminder harian
       'Pengingat Pencatatan',
-      'Assalamualaikum $userName, bagaimana hari ini? apakah darah keluar lagi?, ayo catat!!!',
-      tz.TZDateTime.from(scheduledTime, tz.local),
+      'Assalamualaikum $userName, bagaimana hari ini? Sudahkah darah keluar? Ayo catat!',
+      scheduledTime,
       const NotificationDetails(
         android: AndroidNotificationDetails(
           'reminder_channel',
-          'Recording Reminders',
-          channelDescription: 'Daily reminders for recording',
+          'Pengingat Harian',
+          channelDescription: 'Pengingat rutin untuk pencatatan',
           importance: Importance.high,
           priority: Priority.high,
           sound: RawResourceAndroidNotificationSound('default'),
           enableVibration: true,
           actions: [
-            AndroidNotificationAction('record', 'CATAT', showsUserInterface: true),
+            // Tambahkan aksi notifikasi
+            AndroidNotificationAction('record_action', 'CATAT SEKARANG', showsUserInterface: true),
           ],
         ),
       ),
@@ -133,19 +198,6 @@ class NotificationService {
           UILocalNotificationDateInterpretation.absoluteTime,
       matchDateTimeComponents: DateTimeComponents.time,
     );
-  }
-
-  Future<void> cancelAllNotifications() async {
-    await flutterLocalNotificationsPlugin.cancelAll();
-  }
-
-  Future<void> cancelRecordingReminder() async {
-    await flutterLocalNotificationsPlugin.cancel(999999);
-  }
-
-  Future<void> cancelPrayerNotifications() async {
-    // Cancel specific prayer notifications if needed
-    // For now, cancel all and reschedule
-    await cancelAllNotifications();
+    debugPrint('Daily recording reminder scheduled for 5:00 AM (ID: $reminderId).');
   }
 }

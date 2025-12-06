@@ -22,6 +22,99 @@ class CalendarPage extends StatefulWidget {
 
 class _CalendarPageState extends State<CalendarPage> {
   late DateTime _focusedDay;
+  // Di dalam class _CalendarPageState extends State<CalendarPage> { ... }
+
+// Helper untuk membangun satu baris keterangan
+  Widget _buildLegendItem({
+    required Color color,
+    required String label,
+    required String description,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Kotak Warna
+          Container(
+            width: 16,
+            height: 16,
+            margin: const EdgeInsets.only(top: 4, right: 12),
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+          // Keterangan
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                    color: textColor,
+                  ),
+                ),
+                Text(
+                  description,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+// Widget utama untuk legend (menggantikan ListTile yang lama)
+  Widget _buildMenstrualCycleLegend() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Keterangan Siklus Haid:',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: textColor,
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // 1. Keterangan Hari Haid (Merah)
+          _buildLegendItem(
+            color: menstrualColor,
+            label: 'Hari Haid (Merah)',
+            description: 'Tanggal yang termasuk periode Haid (riwayat final).',
+          ),
+
+          // 2. Keterangan Hari Istihadah (Hijau)
+          _buildLegendItem(
+            color: istihadahColor,
+            label: 'Hari Istihadah (Hijau)',
+            description:
+                'Tanggal yang termasuk periode Istihadah (riwayat final).',
+          ),
+
+          // 3. Keterangan Prediksi Haid (Kuning)
+          _buildLegendItem(
+            color: predictionColor,
+            label: 'Tanggal Prediksi Haid (Kuning)',
+            description: 'Prediksi tanggal haid/suci berikutnya (belum final).',
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -65,23 +158,7 @@ class _CalendarPageState extends State<CalendarPage> {
               onNextMonth: _nextMonth,
             ),
             const SizedBox(height: 20),
-            const Text(
-              'Keterangan:',
-              style: TextStyle(
-                  fontSize: 18, fontWeight: FontWeight.bold, color: textColor),
-            ),
-            const ListTile(
-              leading: const Icon(Icons.circle, color: Colors.red),
-              title: const Text('Tanggal Haid (Riwayat Final)'),
-            ),
-            const ListTile(
-              leading: const Icon(Icons.circle, color: Colors.green),
-              title: const Text('Tanggal Istihadah (Riwayat Final)'),
-            ),
-            const ListTile(
-              leading: const Icon(Icons.circle, color: Colors.pink),
-              title: const Text('Prediksi Haid Mendatang'),
-            ),
+            _buildMenstrualCycleLegend(),
           ],
         ),
       ),

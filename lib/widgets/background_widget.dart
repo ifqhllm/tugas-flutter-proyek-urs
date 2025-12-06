@@ -9,68 +9,88 @@ class BackgroundWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        // Base uniform pink background
+        // 1. Latar belakang dasar Ungu Muda Pucat (Lilac)
         Container(
           width: double.infinity,
           height: double.infinity,
-          color: const Color(0xFFFCE4EC), // Very light blush pink
+          // Menggunakan warna ungu muda pucat yang mendekati lilac
+          color: const Color(
+              0xFFF3E5F5), // Contoh: Lavender Blush/Very Light Purple
         ),
-        // Top curved shape
+
+        // 2. Bentuk kurva/gelombang Atas (Putih Transparan)
         Positioned(
           top: 0,
           left: 0,
           right: 0,
           height: 150,
           child: ClipPath(
+            // Menggunakan clipper yang sudah ada
             clipper: TopWaveClipper(),
             child: Container(
-              color: Colors.white.withOpacity(0.15),
+              // Warna Putih dengan Opasitas, memberi kesan "kabut"
+              color: Colors.white.withOpacity(0.35),
             ),
           ),
         ),
-        // Bottom curved shape
+
+        // 3. Bentuk kurva/gelombang Bawah (Putih Transparan)
         Positioned(
           bottom: 0,
           left: 0,
           right: 0,
           height: 150,
           child: ClipPath(
+            // Menggunakan clipper yang sudah ada
             clipper: BottomWaveClipper(),
             child: Container(
-              color: Colors.white.withOpacity(0.15),
+              // Warna Putih dengan Opasitas
+              color: Colors.white.withOpacity(0.35),
             ),
           ),
         ),
-        // Large transparent circle with light purple gradient
+
+        // 4. Lingkaran radial (untuk efek cahaya lembut di tengah, menyesuaikan gradien)
         Center(
           child: Container(
-            width: MediaQuery.of(context).size.width * 1.2,
-            height: MediaQuery.of(context).size.width * 1.2,
+            width: MediaQuery.of(context).size.width * 1.5, // Lebih besar
+            height: MediaQuery.of(context).size.width * 1.5,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: RadialGradient(
                 colors: [
-                  const Color(0xFFE1BEE7).withOpacity(0.2), // Light purple
+                  // Warna Putih/Lilac yang sangat terang dan transparan
+                  const Color(0xFFFFFFFF).withOpacity(0.4),
                   Colors.transparent,
                 ],
-                stops: [0.0, 1.0],
+                stops: const [
+                  0.0,
+                  0.7
+                ], // Mengubah stops agar gradien lebih menyebar
               ),
             ),
           ),
         ),
+
+        // 5. Konten anak
         child,
       ],
     );
   }
 }
 
+// --- CLIPPERS (TETAP SAMA) ---
+
 class TopWaveClipper extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {
     Path path = Path();
     path.lineTo(0, size.height - 20);
-    path.quadraticBezierTo(size.width / 4, size.height, size.width / 2, size.height - 20);
-    path.quadraticBezierTo(3 * size.width / 4, size.height - 40, size.width, size.height - 20);
+    // Membuat kurva lebih halus
+    path.quadraticBezierTo(
+        size.width / 4, size.height, size.width / 2, size.height - 20);
+    path.quadraticBezierTo(
+        3 * size.width / 4, size.height - 40, size.width, size.height - 20);
     path.lineTo(size.width, 0);
     path.lineTo(0, 0);
     path.close();
@@ -86,6 +106,7 @@ class BottomWaveClipper extends CustomClipper<Path> {
   Path getClip(Size size) {
     Path path = Path();
     path.moveTo(0, 20);
+    // Membuat kurva lebih halus
     path.quadraticBezierTo(size.width / 4, 0, size.width / 2, 20);
     path.quadraticBezierTo(3 * size.width / 4, 40, size.width, 20);
     path.lineTo(size.width, size.height);

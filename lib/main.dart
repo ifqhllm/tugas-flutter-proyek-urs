@@ -16,10 +16,14 @@ import 'pages/cycle_tracker_page.dart';
 final FikihService fikihService = FikihService();
 final HaidService haidService = HaidService();
 
+const String userNameKey = 'user_name';
+
 // --- Onboarding & Theme Configuration ---
 
 class NameInputScreen extends StatefulWidget {
   const NameInputScreen({super.key});
+  
+  
 
   @override
   State<NameInputScreen> createState() => _NameInputScreenState();
@@ -255,27 +259,25 @@ class _SplashScreenState extends State<SplashScreen> {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  await Hive.initFlutter();
+
+  Hive.registerAdapter(BloodEventAdapter()); // TypeId 1
+  Hive.registerAdapter(HaidRecordAdapter()); // TypeId 0
 
   try {
+    await Hive.openBox<HaidRecord>('haidRecords');
     // Initialize notifications
     await NotificationService().init();
-
-    // Perbaikan: Inisialisasi Hive dan daftarkan Adapter
-    await Hive.initFlutter();
-
-    // HaidRecordAdapter ada di haid_record.g.dart, yang diimpor melalui models/haid_record.dart
-    Hive.registerAdapter(HaidRecordAdapter());
-    Hive.registerAdapter(BloodEventAdapter());
+    await NotificationService().scheduleDailyRecordingReminder();
 
     initializeDateFormatting('id_ID', null).then((_) {
       runApp(const AlHeedhApp());
     });
   } catch (e) {
-    // Fallback if initialization fails
-    debugPrint('Initialization error: $e');
-    initializeDateFormatting('id_ID', null).then((_) {
-      runApp(const AlHeedhApp());
-    });
+    await initializeDateFormatting('id_ID', null);
+    print('🚨 FATAL INIT ERROR: $e'); 
+    runApp(const AlHeedhApp());
   }
 }
 

@@ -133,10 +133,13 @@ class MonthlyCalendarGrid extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: markerColor ?? (isCurrentMonth
-            ? const Color(0xFFFFF8FA)
-            : Colors.white), // Full background color for events
-        border: Border.all(color: Colors.grey.shade200, width: 0.5),
+        color: markerColor ??
+            (isCurrentMonth
+                ? const Color(0xFFFFF8FA)
+                : Colors.white), // Full background color for events
+        border: isToday
+            ? Border.all(color: Colors.blue, width: 2)
+            : Border.all(color: Colors.grey.shade200, width: 0.5),
       ),
       child: Center(
         child: Text(

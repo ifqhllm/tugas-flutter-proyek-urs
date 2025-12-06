@@ -31,7 +31,9 @@ class HaidRecord extends HiveObject {
     this.durationDays = 0,
     this.notes = '',
     List<BloodEvent>? bloodEvents,
-  }) : bloodEvents = bloodEvents ?? [];
+  }) : bloodEvents = bloodEvents ?? [] {calculateDuration();
+  } 
+  
 
   // Metode untuk menghitung durasi saat haid selesai
   void calculateDuration() {

@@ -14,6 +14,7 @@ dependencies:
   # Packages yang Sudah Ada
   shared_preferences: ^2.2.3 # Untuk menyimpan nama pengguna
   http: ^1.2.1               # Untuk integrasi API waktu salat
+  html: ^0.15.4              # Untuk parsing HTML jadwal sholat
 
   # Packages Baru untuk Fungsionalitas Inti
   table_calendar: ^3.1.1     # Untuk tampilan kalender interaktif
@@ -43,11 +44,5 @@ flutter:
     - assets/images/jadwal sholat.jpg
     - assets/images/artikel.jpg
     - assets/images/wirid dan doa.jpg
-
-  # Font yang lebih feminin (Jika kamu punya font kustom, letakkan di sini)
-  # fonts:
-  #   - family: Montserrat
-  #     fonts:
-  #       - asset: assets/fonts/Montserrat-Regular.ttf
-  #       - asset: assets/fonts/Montserrat-Bold.ttf
-  #         weight: 700
+    - assets/silhouette.png
+ 
