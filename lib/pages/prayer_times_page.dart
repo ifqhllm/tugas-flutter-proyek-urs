@@ -35,6 +35,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
     'Imsak': Icons.nights_stay,
     'Shubuh': Icons.wb_cloudy,
     'Terbit': Icons.wb_sunny_outlined,
+    'Dhuha': Icons.wb_sunny,
     'Dhuhur': Icons.wb_sunny,
     'Ashar': Icons.cloud,
     'Maghrib': Icons.nightlight_round,
@@ -236,12 +237,9 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
       final now = DateTime.now();
       final targetDate = date ?? now;
 
-      final month = targetDate.month;
-      final year = targetDate.year;
-
       final JadwalHarian? jadwalHarian =
           await SholatService.fetchJadwalHarianByCoordinates(
-              lat, lon, year, month);
+              lat, lon, targetDate);
 
       if (jadwalHarian != null) {
         // Convert JadwalHarian to Map<String, String> format for compatibility
@@ -249,6 +247,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
           'Imsak': jadwalHarian.imsak,
           'Shubuh': jadwalHarian.subuh,
           'Terbit': jadwalHarian.terbit,
+          'Dhuha': jadwalHarian.dhuha,
           'Dhuhur': jadwalHarian.dzuhur,
           'Ashar': jadwalHarian.ashar,
           'Maghrib': jadwalHarian.maghrib,
@@ -452,6 +451,8 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
   void _showManualInputDialog() {
     final TextEditingController shubuhController =
         TextEditingController(text: _prayerTimes['Shubuh'] ?? '');
+    final TextEditingController dhuhaController =
+        TextEditingController(text: _prayerTimes['Dhuha'] ?? '');
     final TextEditingController dhuhurController =
         TextEditingController(text: _prayerTimes['Dhuhur'] ?? '');
     final TextEditingController asharController =
@@ -506,6 +507,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
                 ),
                 const SizedBox(height: 16),
                 _buildTimeInputField('Shubuh', shubuhController),
+                _buildTimeInputField('Dhuha', dhuhaController),
                 _buildTimeInputField('Dhuhur', dhuhurController),
                 _buildTimeInputField('Ashar', asharController),
                 _buildTimeInputField('Maghrib', maghribController),
@@ -527,6 +529,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
                   'Shubuh': shubuhController.text,
                   'Terbit': _adjustTime(
                       shubuhController.text, 20), // Approximate sunrise
+                  'Dhuha': dhuhaController.text,
                   'Dhuhur': dhuhurController.text,
                   'Ashar': asharController.text,
                   'Maghrib': maghribController.text,
@@ -1005,6 +1008,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
       'Imsak',
       'Shubuh',
       'Terbit',
+      'Dhuha',
       'Dhuhur',
       'Ashar',
       'Maghrib',

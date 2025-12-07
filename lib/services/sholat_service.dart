@@ -1,19 +1,16 @@
+import 'dart:async'; // Tambahkan untuk penanganan TimeoutException
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/jadwal_harian.dart';
 
 class SholatService {
-  // Changed to Aladhan API which supports all locations via GPS coordinates
   static const String baseUrl = 'https://api.aladhan.com/v1';
 
-  /// Mengambil jadwal salat harian berdasarkan koordinat GPS
-  /// Menggunakan Aladhan API yang mendukung semua lokasi di dunia
   static Future<JadwalHarian?> fetchJadwalHarianByCoordinates(
-      double latitude, double longitude, int tahun, int bulan) async {
+      double latitude, double longitude, DateTime targetDate) async {
     try {
-      // Aladhan API endpoint untuk calendar berdasarkan koordinat
       final url = Uri.parse(
-          '$baseUrl/calendar/$tahun/$bulan?latitude=$latitude&longitude=$longitude&method=2');
+          '$baseUrl/calendar/${targetDate.year}/${targetDate.month}?latitude=$latitude&longitude=$longitude&method=9');
       print('🔗 ALADHAN API URL: $url');
 
       final response = await http.get(url).timeout(const Duration(seconds: 30));
@@ -21,90 +18,71 @@ class SholatService {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        print('📦 Raw Response: ${response.body.substring(0, 200)}...');
 
         if (data['code'] == 200 && data['data'] != null) {
           final jadwalData = data['data'] as List;
           print('📋 Jadwal data count: ${jadwalData.length}');
 
-          // Cari data untuk tanggal hari ini
-          final today = DateTime.now();
-          final todayDate = today.day;
-          print('📅 Looking for date: $todayDate');
+          // Cari data untuk tanggal target
+          print(
+              '📅 Looking for date: ${targetDate.day}/${targetDate.month}/${targetDate.year}');
 
-          // Cari jadwal yang sesuai dengan tanggal hari ini
-          final todayJadwal = jadwalData.firstWhere(
+          // Logika pencarian harian yang telah diperbaiki: Membandingkan STRING vs STRING.
+          final targetJadwal = jadwalData.firstWhere(
             (jadwal) {
-              final dateStr = jadwal['date']['readable'];
-              final day = DateTime.parse(dateStr).day;
-              return day == todayDate;
+              final gregorian = jadwal['date']['gregorian'];
+
+              // Pastikan data API dikonversi atau dibaca sebagai String.
+              final dayApi = gregorian['day']?.toString();
+              final monthApi = gregorian['month']['number']?.toString();
+              final yearApi = gregorian['year']?.toString();
+
+              // Target date dikonversi ke String untuk perbandingan yang benar.
+              // Pad day with leading zero to match API format ("07" vs "7")
+              final String targetDay =
+                  targetDate.day.toString().padLeft(2, '0');
+              return dayApi == targetDay &&
+                  monthApi == targetDate.month.toString() &&
+                  yearApi == targetDate.year.toString();
             },
             orElse: () => null,
           );
 
-          if (todayJadwal != null) {
+          if (targetJadwal != null) {
             print(
-                '✅ Found jadwal for today: ${todayJadwal['date']['readable']}');
+                '✅ Found jadwal for target date: ${targetJadwal['date']['readable']}');
 
-            // Extract prayer times from Aladhan format
-            final timings = todayJadwal['timings'];
-            print('🕐 Raw timings: $timings');
-
-            // Convert to JadwalHarian format
-            final jadwalHarian = JadwalHarian(
-              imsak: _extractTime(timings['Fajr'] ?? ''),
-              subuh: _extractTime(timings['Fajr'] ?? ''),
-              terbit: _extractTime(timings['Sunrise'] ?? ''),
-              dhuha:
-                  _extractTime(timings['Dhuhr'] ?? ''), // Using Dhuhr for Dhuha
-              dzuhur: _extractTime(timings['Dhuhr'] ?? ''),
-              ashar: _extractTime(timings['Asr'] ?? ''),
-              maghrib: _extractTime(timings['Maghrib'] ?? ''),
-              isya: _extractTime(timings['Isha'] ?? ''),
-            );
+            final timings = targetJadwal['timings'];
+            final jadwalHarian = JadwalHarian.fromJson(timings);
 
             print(
-                '🕐 Converted times: imsak=${jadwalHarian.imsak}, subuh=${jadwalHarian.subuh}, dzuhur=${jadwalHarian.dzuhur}');
+                '🕐 Converted times: Imsak=${jadwalHarian.imsak}, Subuh=${jadwalHarian.subuh}, Dzuhur=${jadwalHarian.dzuhur}');
             return jadwalHarian;
           } else {
-            print('❌ No jadwal found for today ($todayDate)');
             print(
-                '📋 Available dates: ${jadwalData.map((j) => j['date']['readable']).toList()}');
+                '❌ No jadwal found for target date (${targetDate.day}/${targetDate.month}/${targetDate.year})');
             return null;
           }
         } else {
           print('❌ API response code not 200 or no data');
-          print('📦 Full response: $data');
           return null;
         }
       } else {
         print('❌ HTTP Error: ${response.statusCode}');
-        print('📦 Error body: ${response.body}');
         return null;
       }
     } catch (e) {
-      print('💥 Error fetching jadwal harian from Aladhan: $e');
-      print('🔍 Error type: ${e.runtimeType}');
-      print('🔍 Error message: ${e.toString()}');
+      print('💥 Error fetching jadwal harian: $e');
 
-      // Jika error koneksi, coba gunakan data default
-      if (e.toString().contains('ClientException') ||
-          e.toString().contains('SocketException') ||
-          e.toString().contains('TimeoutException')) {
-        print('🌐 Network error detected, returning default prayer times');
+      // Penanganan khusus untuk error jaringan/timeout
+      if (e is http.ClientException || e is TimeoutException) {
+        print(
+            '🌐 Network error or timeout detected, returning default prayer times');
         return _getDefaultPrayerTimes();
       }
 
       return null;
     }
-  }
-
-  /// Extract time from Aladhan timing format (e.g., "04:43 (WIB)")
-  static String _extractTime(String timingStr) {
-    if (timingStr.isEmpty) return '';
-    // Extract time before the timezone (e.g., "04:43" from "04:43 (WIB)")
-    final timeMatch = RegExp(r'(\d{1,2}:\d{2})').firstMatch(timingStr);
-    return timeMatch?.group(1) ?? '';
   }
 
   /// Mengembalikan jadwal salat default sebagai fallback
@@ -114,7 +92,7 @@ class SholatService {
       imsak: '04:30',
       subuh: '04:40',
       terbit: '05:55',
-      dhuha: '06:30',
+      dhuha: '06:25',
       dzuhur: '12:00',
       ashar: '15:00',
       maghrib: '18:00',

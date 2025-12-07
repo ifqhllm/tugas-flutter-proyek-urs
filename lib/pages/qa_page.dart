@@ -21,6 +21,7 @@ class _QAPageState extends State<QAPage> {
     if (question.isEmpty) return;
 
     setState(() {
+      _answer = '';
       _isLoading = true;
     });
 
