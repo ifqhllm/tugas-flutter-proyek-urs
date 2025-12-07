@@ -22,8 +22,6 @@ const String userNameKey = 'user_name';
 
 class NameInputScreen extends StatefulWidget {
   const NameInputScreen({super.key});
-  
-  
 
   @override
   State<NameInputScreen> createState() => _NameInputScreenState();
@@ -31,22 +29,52 @@ class NameInputScreen extends StatefulWidget {
 
 class _NameInputScreenState extends State<NameInputScreen> {
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _suciHabitsController = TextEditingController();
 
   Future<void> _saveNameAndNavigate() async {
     final name = _nameController.text.trim();
-    if (name.isNotEmpty) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(
-          userNameKey, name); // Ganti _userNameKey dengan userNameKey
+    final suciHabitsText = _suciHabitsController.text.trim();
+    if (name.isNotEmpty && suciHabitsText.isNotEmpty) {
+      final suciHabits = int.tryParse(suciHabitsText);
+      if (suciHabits != null && suciHabits > 0) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(userNameKey, name);
+        await prefs.setInt('suci_habits', suciHabits);
 
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const MainScreen()),
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            PageRouteBuilder(
+              pageBuilder: (context, animation, secondaryAnimation) =>
+                  const MainScreen(),
+              transitionsBuilder:
+                  (context, animation, secondaryAnimation, child) {
+                const begin = Offset(1.0, 0.0);
+                const end = Offset.zero;
+                const curve = Curves.easeInOutCubic;
+
+                var tween = Tween(begin: begin, end: end)
+                    .chain(CurveTween(curve: curve));
+                var offsetAnimation = animation.drive(tween);
+
+                return SlideTransition(
+                  position: offsetAnimation,
+                  child: child,
+                );
+              },
+              transitionDuration: const Duration(milliseconds: 500),
+            ),
+          );
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Kebiasaan suci harus berupa angka positif.')),
         );
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Nama tidak boleh kosong.')),
+        const SnackBar(
+            content: Text('Nama dan kebiasaan suci tidak boleh kosong.')),
       );
     }
   }
@@ -67,7 +95,7 @@ class _NameInputScreenState extends State<NameInputScreen> {
               children: <Widget>[
                 // Logo kecil di Onboarding
                 Image.asset(
-                  'assets/images/logo.apk.png',
+                  'assets/images/Logo.png',
                   height: 100,
                   width: 100,
                 ),
@@ -110,6 +138,28 @@ class _NameInputScreenState extends State<NameInputScreen> {
                   ),
                   keyboardType: TextInputType.name,
                   textCapitalization: TextCapitalization.words,
+                ),
+                const SizedBox(height: 20),
+                TextField(
+                  controller: _suciHabitsController,
+                  decoration: InputDecoration(
+                    labelText: 'Kebiasaan Suci (hari)',
+                    hintText: 'Masukkan rata-rata hari suci dalam siklus',
+                    fillColor: Colors.white,
+                    filled: true,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: primaryColor),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide:
+                          const BorderSide(color: secondaryColor, width: 2),
+                    ),
+                    prefixIcon:
+                        const Icon(Icons.calendar_today, color: primaryColor),
+                  ),
+                  keyboardType: TextInputType.number,
                 ),
                 const SizedBox(height: 20),
                 ElevatedButton.icon(
@@ -156,16 +206,54 @@ class _SplashScreenState extends State<SplashScreen> {
     final prefs = await SharedPreferences.getInstance();
     final userName = prefs.getString(userNameKey);
 
-    await Future.delayed(const Duration(seconds: 3));
+    await Future.delayed(const Duration(seconds: 5));
 
     if (mounted) {
       if (userName != null && userName.isNotEmpty) {
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const MainScreen()),
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) =>
+                const MainScreen(),
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) {
+              const begin = Offset(1.0, 0.0);
+              const end = Offset.zero;
+              const curve = Curves.easeInOutCubic;
+
+              var tween =
+                  Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+              var offsetAnimation = animation.drive(tween);
+
+              return SlideTransition(
+                position: offsetAnimation,
+                child: child,
+              );
+            },
+            transitionDuration: const Duration(milliseconds: 500),
+          ),
         );
       } else {
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const NameInputScreen()),
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) =>
+                const NameInputScreen(),
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) {
+              const begin = Offset(1.0, 0.0);
+              const end = Offset.zero;
+              const curve = Curves.easeInOutCubic;
+
+              var tween =
+                  Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+              var offsetAnimation = animation.drive(tween);
+
+              return SlideTransition(
+                position: offsetAnimation,
+                child: child,
+              );
+            },
+            transitionDuration: const Duration(milliseconds: 500),
+          ),
         );
       }
     }
@@ -185,38 +273,32 @@ class _SplashScreenState extends State<SplashScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     // Menampilkan logo yang diunggah
-                    Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(30),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 77),
-                            blurRadius: 15,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(30),
-                        child: Image.asset(
-                          'assets/images/logo.apk.png',
-                          height: 250,
-                          width: 250,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return const Icon(Icons.mosque,
-                                size: 250, color: primaryColor);
-                          },
-                        ),
+                    Image.asset(
+                      'assets/images/Logo-1.png',
+                      height: 250,
+                      width: 250,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Icon(Icons.mosque,
+                            size: 250, color: primaryColor);
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                    const Text(
+                      'AL-HEEDH',
+                      style: TextStyle(
+                        fontSize: 28,
+                        color: secondaryColor,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 30),
+                    const SizedBox(height: 10),
                     const Text(
-                      'Al-Heedh: Solusi Cerdas Muslimah',
+                      'Solusi Cerdas Muslimah',
                       style: TextStyle(
-                        fontSize: 20,
-                        color: primaryColor,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 18,
+                        color: secondaryColor,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],
@@ -225,18 +307,18 @@ class _SplashScreenState extends State<SplashScreen> {
             ),
             // Indikator progres di bagian bawah
             Padding(
-              padding: const EdgeInsets.only(bottom: 50),
+              padding: const EdgeInsets.only(bottom: 80),
               child: SizedBox(
-                height: 6,
-                width: 200,
+                height: 8,
+                width: 300,
                 child: ShaderMask(
                   shaderCallback: (Rect bounds) {
                     return LinearGradient(
                       begin: Alignment.centerLeft,
                       end: Alignment.centerRight,
                       colors: [
-                        const Color.fromARGB(255, 250, 229, 236).withValues(alpha: 1.0),
-                        const Color.fromARGB(255, 234, 203, 253).withValues(alpha: 0.8),
+                        Colors.yellow,
+                        Colors.red,
                       ],
                     ).createShader(bounds);
                   },
@@ -259,7 +341,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   await Hive.initFlutter();
 
   Hive.registerAdapter(BloodEventAdapter()); // TypeId 1
@@ -276,7 +358,7 @@ void main() async {
     });
   } catch (e) {
     await initializeDateFormatting('id_ID', null);
-    print('🚨 FATAL INIT ERROR: $e'); 
+    print('🚨 FATAL INIT ERROR: $e');
     runApp(const AlHeedhApp());
   }
 }
@@ -342,7 +424,8 @@ class _MainScreenState extends State<MainScreen> {
 
       // Muat Data Siklus Awal
       final allRecords = await haidService.getAllRecords();
-      final predictedDate = fikihService.getNextPredictedStartDate(allRecords);
+      final predictedDate =
+          await fikihService.getNextPredictedStartDate(allRecords);
 
       if (mounted) {
         setState(() {
@@ -398,38 +481,32 @@ class _MainScreenState extends State<MainScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(30),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 77),
-                              blurRadius: 15,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(30),
-                          child: Image.asset(
-                            'assets/images/logo.apk.png',
-                            height: 250,
-                            width: 250,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return const Icon(Icons.mosque,
-                                  size: 250, color: primaryColor);
-                            },
-                          ),
+                      Image.asset(
+                        'assets/images/Logo-1.png',
+                        height: 250,
+                        width: 250,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) {
+                          return const Icon(Icons.mosque,
+                              size: 250, color: primaryColor);
+                        },
+                      ),
+                      const SizedBox(height: 20),
+                      const Text(
+                        'AL-HEEDH',
+                        style: TextStyle(
+                          fontSize: 28,
+                          color: secondaryColor,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(height: 30),
+                      const SizedBox(height: 10),
                       const Text(
-                        'Al-Heedh: Solusi Cerdas Muslimah',
+                        'Solusi Cerdas Muslimah',
                         style: TextStyle(
-                          fontSize: 20,
-                          color: primaryColor,
-                          fontWeight: FontWeight.w600,
+                          fontSize: 18,
+                          color: secondaryColor,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
@@ -437,18 +514,18 @@ class _MainScreenState extends State<MainScreen> {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.only(bottom: 50),
+                padding: const EdgeInsets.only(bottom: 80),
                 child: SizedBox(
-                  height: 6,
-                  width: 200,
+                  height: 8,
+                  width: 300,
                   child: ShaderMask(
                     shaderCallback: (Rect bounds) {
                       return LinearGradient(
                         begin: Alignment.centerLeft,
                         end: Alignment.centerRight,
                         colors: [
-                          const Color.fromARGB(255, 250, 229, 236).withValues(alpha: 1.0),
-                          const Color.fromARGB(255, 234, 203, 253).withValues(alpha: 0.8),
+                          Colors.yellow,
+                          Colors.red,
                         ],
                       ).createShader(bounds);
                     },
@@ -486,7 +563,8 @@ class _MainScreenState extends State<MainScreen> {
       body: _widgetOptions.elementAt(_selectedIndex),
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Beranda'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.home_filled), label: 'Beranda'),
           BottomNavigationBarItem(
               icon: Icon(Icons.calendar_month), label: 'Kalender'),
           BottomNavigationBarItem(

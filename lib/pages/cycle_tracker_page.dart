@@ -45,31 +45,25 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
     try {
       final allRecords = await haidService.getAllRecords();
       final current = await haidService.getCurrentActiveRecord();
+      final nextPredictedDate =
+          await fikihService.getNextPredictedStartDate(allRecords);
 
       if (mounted) {
         setState(() {
           _currentRecord = current;
           _allRecords = allRecords;
 
-          // Logika baru untuk status Home Page
+          // Logika untuk status Home Page
           if (current != null && current.endDate == null) {
             // Jika ada record aktif TAPI belum selesai (endDate == null)
-            final durationHours =
-                DateTime.now().difference(current.startDate).inHours;
-            if (durationHours > 360) {
-              // 15 hari
-              _hukumStatus = 'ISTIHADAH (Melebihi 15 Hari)';
-            } else {
-              _hukumStatus = 'HAID SEMENTARA';
-            }
+            _hukumStatus = 'HAID SEMENTARA';
           } else {
             // Jika tidak ada record aktif atau sudah selesai, hitung status final hari ini
             _hukumStatus =
                 fikihService.getHukumStatus(DateTime.now(), allRecords);
           }
 
-          _nextPredictedDate =
-              fikihService.getNextPredictedStartDate(allRecords);
+          _nextPredictedDate = nextPredictedDate;
         });
       }
     } catch (e) {
@@ -288,8 +282,27 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
       children: [
         InkWell(
           onTap: () {
-            Navigator.of(context)
-                .push(MaterialPageRoute(builder: (context) => page));
+            Navigator.of(context).push(
+              PageRouteBuilder(
+                pageBuilder: (context, animation, secondaryAnimation) => page,
+                transitionsBuilder:
+                    (context, animation, secondaryAnimation, child) {
+                  const begin = Offset(1.0, 0.0);
+                  const end = Offset.zero;
+                  const curve = Curves.easeInOutCubic;
+
+                  var tween = Tween(begin: begin, end: end)
+                      .chain(CurveTween(curve: curve));
+                  var offsetAnimation = animation.drive(tween);
+
+                  return SlideTransition(
+                    position: offsetAnimation,
+                    child: child,
+                  );
+                },
+                transitionDuration: const Duration(milliseconds: 500),
+              ),
+            );
           },
           borderRadius: BorderRadius.circular(40),
           child: Container(
@@ -299,21 +312,34 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
               borderRadius: BorderRadius.circular(40),
             ),
             padding: const EdgeInsets.all(12),
-            child: Image.asset(
-              assetPath,
-              fit: BoxFit.contain,
-              errorBuilder: (context, error, stackTrace) {
-                return const Icon(Icons.favorite_border,
-                    size: 40, color: primaryColor);
-              },
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(28),
+              child: Image.asset(
+                assetPath,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return const Icon(Icons.favorite_border,
+                      size: 40, color: primaryColor);
+                },
+              ),
             ),
           ),
         ),
         const SizedBox(height: 8),
         Text(
           label,
-          style: const TextStyle(
-              fontSize: 12, color: textColor, fontWeight: FontWeight.w500),
+          style: TextStyle(
+            fontSize: 12,
+            color: textColor,
+            fontWeight: FontWeight.w500,
+            shadows: [
+              Shadow(
+                color: Colors.black.withOpacity(0.3),
+                offset: const Offset(1, 1),
+                blurRadius: 2,
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -337,7 +363,7 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Icon(
-                      Icons.woman,
+                      Icons.female,
                       color: secondaryColor,
                       size: 28,
                     ),
@@ -345,7 +371,7 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                     Text(
                       'Assalamualaikum, ${widget.userName}',
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 25,
                         fontWeight: FontWeight.w800,
                         color: secondaryColor,
@@ -353,17 +379,27 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                     ),
                     const SizedBox(width: 8),
                     const Icon(
-                      Icons.woman,
+                      Icons.female,
                       color: secondaryColor,
                       size: 28,
                     ),
                   ],
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'Bagaimana keadaan Anda hari ini?',
+                Text(
+                  'Apakah Ada Catatan Hari ini?',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 16, color: textColor),
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: textColor,
+                    shadows: [
+                      Shadow(
+                        color: Colors.black.withOpacity(0.2),
+                        offset: const Offset(1, 1),
+                        blurRadius: 2,
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 25),
 
@@ -372,12 +408,19 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                   padding: const EdgeInsets.all(20.0),
                   child: Column(
                     children: [
-                      const Text(
+                      Text(
                         'Status Hukum Haid Periode Ini:',
                         style: TextStyle(
                           fontSize: 20,
                           color: Colors.black,
                           fontWeight: FontWeight.w600,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black.withOpacity(0.2),
+                              offset: const Offset(1, 1),
+                              blurRadius: 2,
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(height: 10),
@@ -386,25 +429,43 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                             ? 'Menghitung...'
                             : _hukumStatus.toUpperCase(),
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 25,
                           fontWeight: FontWeight.w900,
                           color: textColor,
                           height: 1.2,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black.withOpacity(0.4),
+                              offset: const Offset(1, 1),
+                              blurRadius: 3,
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(height: 10),
                       Text(
                         _hukumStatus == 'HAID SEMENTARA'
                             ? 'Silakan catat peristiwa darah harian/jam-an. Status final akan dihitung setelah Darah Berhenti.'
-                            : _hukumStatus == 'HAID' ||
-                                    _hukumStatus == 'ISTIHADAH'
-                                ? 'Ada pengecualian ibadah.'
-                                : 'Jika Anda Suci maka wajib qodho sholat. jika istihadah silahkan baca artikel mengenai hukumnya!',
+                            : _hukumStatus.contains('HAID SELAMA')
+                                ? 'Jika Sudah Berhenti Silahkan Melakukan Mandi Wajib.'
+                                : _hukumStatus == 'ISTIHADAH KURANG DARI 24 JAM'
+                                    ? 'Karena kurang dari 24 jam maka haid anda adalah 1 hari. Silahkan Qadha\' Shalat dan Puasa Jika Ditinggalkan.'
+                                    : _hukumStatus ==
+                                            'ISTIHADAH LEBIH DARI 15 HARI'
+                                        ? 'Haid Anda Adalah 15 hari. Selebihnya Adalah Istihadah.'
+                                        : 'Jika Anda Suci maka wajib qodho sholat. jika istihadah silahkan baca artikel mengenai hukumnya!',
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14,
                           color: Colors.black87,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black.withOpacity(0.1),
+                              offset: const Offset(1, 1),
+                              blurRadius: 1,
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -420,17 +481,14 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                     children: [
                       _buildNavButton(
                           context,
-                          'assets/images/jadwal sholat.jpg',
+                          'assets/images/Jadwal Shalat.png',
                           'Jadwal Shalat',
                           const PrayerTimesPage()),
-                      _buildNavButton(
-                          context,
-                          'assets/images/wirid dan doa.jpg',
-                          'Wirid & Doa',
-                          const WiridAndDuaPage()),
-                      _buildNavButton(context, 'assets/images/artikel.jpg',
+                      _buildNavButton(context, 'assets/images/Wirid & Doa.png',
+                          'Wirid & Doa', const WiridAndDuaPage()),
+                      _buildNavButton(context, 'assets/images/Article.png',
                           'Artikel', const articles.DuaPage()),
-                      _buildNavButton(context, 'assets/images/logo.apk.png',
+                      _buildNavButton(context, 'assets/images/Tanya Jawab.png',
                           'Tanya Jawab', const QAPage()),
                     ],
                   ),
@@ -494,8 +552,8 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                   ElevatedButton(
                     onPressed: _startHaidCycle, // PANGGIL FUNGSI START
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFF69B4),
-                      foregroundColor: Colors.black,
+                      backgroundColor: secondaryColor,
+                      foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 18),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(15)),
@@ -521,29 +579,59 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                 Container(
                   padding: const EdgeInsets.all(20.0),
                   decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(15),
-                    border: Border.all(color: Colors.white),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Colors.white,
+                        Colors.pink.shade50,
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                        color: secondaryColor.withOpacity(0.3), width: 1),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.grey.withValues(alpha: 0.1),
-                        spreadRadius: 1,
+                        color: secondaryColor.withOpacity(0.2),
+                        spreadRadius: 2,
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                      BoxShadow(
+                        color: Colors.white.withOpacity(0.8),
+                        spreadRadius: -2,
                         blurRadius: 5,
+                        offset: const Offset(-2, -2),
                       ),
                     ],
                   ),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Prediksi siklus berikutnya',
-                        style: TextStyle(
-                          fontSize: 15,
-                          color: Colors.black,
-                          fontWeight: FontWeight.w700,
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          color: secondaryColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                        child: Text(
+                          'Prediksi siklus berikutnya',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.black,
+                            fontWeight: FontWeight.w700,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black.withOpacity(0.2),
+                                offset: const Offset(1, 1),
+                                blurRadius: 2,
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 15),
                       Text(
                         _isLoading
                             ? 'Memuat data prediksi...'
@@ -551,10 +639,17 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                                 ? 'Data kurang untuk prediksi akurat.'
                                 : 'Prediksi Haid: ${_nextPredictedDate!.day}/${_nextPredictedDate!.month}/${_nextPredictedDate!.year}',
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 22,
+                        style: TextStyle(
+                          fontSize: 20,
                           fontWeight: FontWeight.bold,
                           color: secondaryColor,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black.withOpacity(0.2),
+                              offset: const Offset(1, 1),
+                              blurRadius: 2,
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -566,28 +661,59 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                 Container(
                   padding: const EdgeInsets.all(20.0),
                   decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(15),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Colors.white,
+                        Colors.purple.shade50,
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                        color: primaryColor.withOpacity(0.3), width: 1),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.grey.withValues(alpha: 0.1),
-                        spreadRadius: 1,
+                        color: primaryColor.withOpacity(0.2),
+                        spreadRadius: 2,
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                      BoxShadow(
+                        color: Colors.white.withOpacity(0.8),
+                        spreadRadius: -2,
                         blurRadius: 5,
+                        offset: const Offset(-2, -2),
                       ),
                     ],
                   ),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'RIWAYAT SIKLUS',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.black,
-                          fontWeight: FontWeight.w700,
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          color: primaryColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                        child: Text(
+                          'RIWAYAT SIKLUS',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.black,
+                            fontWeight: FontWeight.w700,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black.withOpacity(0.2),
+                                offset: const Offset(1, 1),
+                                blurRadius: 2,
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 15),
                       if (_allRecords.isEmpty)
                         const Text(
                           'Belum ada riwayat siklus.',
@@ -601,18 +727,85 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                               ? '${record.endDate!.day}/${record.endDate!.month}/${record.endDate!.year}'
                               : 'Sedang berlangsung';
 
+                          // Calculate duration and progress based on logged blood events
+                          final loggedHours = record.bloodEvents.length;
+                          final progressPercentage =
+                              (loggedHours / 24.0).clamp(0.0, 1.0);
+
+                          // Determine color and progress logic based on detailed status
+                          Color progressColor;
+                          List<Color> gradientColors;
+                          double actualProgressPercentage = progressPercentage;
+
+                          String? hukumStatus;
+
+                          if (record.endDate != null) {
+                            // Completed cycle - get detailed status
+                            final statusDetail =
+                                fikihService.getDetailedHukumStatus(
+                                    record.endDate!, _allRecords);
+                            hukumStatus = statusDetail['status'] as String;
+                            final statusType = statusDetail['type'] as String;
+                            final totalDays = record.endDate!
+                                    .difference(record.startDate)
+                                    .inDays +
+                                1;
+
+                            if (statusType == 'HAID') {
+                              // Scenario 1: All days are haid - solid green
+                              progressColor = Colors.green;
+                              gradientColors = [Colors.green, Colors.green];
+                            } else if (statusType == 'ISTIHADAH_SHORT') {
+                              // Scenario 2: 1 day haid (red) + rest istihadah (green)
+                              progressColor = Colors.green;
+                              gradientColors = [Colors.red, Colors.green];
+                              // Progress shows: 1 day red portion, rest green
+                              actualProgressPercentage =
+                                  totalDays > 1 ? (1 / totalDays) : 1.0;
+                            } else if (statusType == 'ISTIHADAH_LONG') {
+                              // Scenario 3: 15 days haid (red) + rest istihadah (green)
+                              progressColor = Colors.green;
+                              gradientColors = [Colors.red, Colors.green];
+                              // Progress shows: 15 days red portion, rest green
+                              actualProgressPercentage =
+                                  totalDays > 15 ? (15 / totalDays) : 1.0;
+                            } else {
+                              // Fallback - all red (istihadah)
+                              progressColor = Colors.red;
+                              gradientColors = [Colors.red, Colors.red];
+                            }
+                          } else {
+                            // Ongoing cycle - yellow to red gradient
+                            progressColor = Colors.orange;
+                            gradientColors = [Colors.yellow, Colors.red];
+                          }
+
                           return Container(
                             margin: const EdgeInsets.only(bottom: 12),
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.white),
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  Colors.white,
+                                  Colors.grey.shade50,
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(15),
+                              border: Border.all(
+                                  color: Colors.grey.withOpacity(0.2),
+                                  width: 1),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.grey.withOpacity(0.1),
-                                  blurRadius: 5,
-                                  offset: const Offset(0, 2),
+                                  color: Colors.grey.withOpacity(0.15),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 3),
+                                ),
+                                BoxShadow(
+                                  color: Colors.white.withOpacity(0.9),
+                                  blurRadius: 3,
+                                  offset: const Offset(-1, -1),
                                 ),
                               ],
                             ),
@@ -667,7 +860,76 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 8),
+                                const SizedBox(height: 12),
+                                // Progress Indicator
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Container(
+                                            height: 8,
+                                            decoration: BoxDecoration(
+                                              color: Colors.grey.shade300,
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
+                                            ),
+                                            child: FractionallySizedBox(
+                                              alignment: Alignment.centerLeft,
+                                              widthFactor:
+                                                  actualProgressPercentage,
+                                              child: Container(
+                                                decoration: BoxDecoration(
+                                                  gradient: LinearGradient(
+                                                    colors: gradientColors,
+                                                  ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(4),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          '${(actualProgressPercentage * 100).toStringAsFixed(1)}%',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                            color: progressColor,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Durasi: $loggedHours jam tercatat (Target Minimal Dalam 1 Haid: 24 Jam)',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey.shade600,
+                                      ),
+                                    ),
+                                    // Status message for completed cycles
+                                    if (record.endDate != null &&
+                                        hukumStatus != null) ...[
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        hukumStatus.contains('ISTIHADAH')
+                                            ? hukumStatus.contains('15')
+                                                ? 'Status: Istihaadah (Melebihi 15 hari - Darah tidak dianggap haid)'
+                                                : 'Status: Istihaadah (Kurang dari 24 jam - Darah tidak dianggap haid)'
+                                            : 'Status: Haid (Sesuai syariat Islam - Ada pengecualian ibadah)',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: progressColor,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
                                 ...record.bloodEvents.map((event) {
                                   final eventTime =
                                       '${event.timestamp.day}/${event.timestamp.month}/${event.timestamp.year} ${event.timestamp.hour}:${event.timestamp.minute.toString().padLeft(2, '0')}';

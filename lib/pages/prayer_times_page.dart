@@ -34,7 +34,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
   final Map<String, IconData> _prayerIcons = {
     'Imsak': Icons.nights_stay,
     'Shubuh': Icons.wb_cloudy,
-    'Terbit': Icons.wb_sunny_outlined,
+    'Terbit': Icons.wb_sunny,
     'Dhuha': Icons.wb_sunny,
     'Dhuhur': Icons.wb_sunny,
     'Ashar': Icons.cloud,
@@ -705,6 +705,10 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
               iconTheme: const IconThemeData(color: lightText),
               actions: [
                 IconButton(
+                  icon: const Icon(Icons.gps_fixed, color: lightText),
+                  onPressed: _updateLocation,
+                ),
+                IconButton(
                   icon: const Icon(Icons.info_outline, color: lightText),
                   onPressed: () {
                     // Logic showDialog yang sudah ada
@@ -733,7 +737,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
 
           // 3. Konten Utama (Header dan List)
           Positioned.fill(
-            top: headerHeight + 30,
+            top: headerHeight + 50,
             child: _isLoading
                 ? Center(
                     child: Column(
@@ -759,7 +763,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
           ),
 
           Positioned(
-            top: AppBar().preferredSize.height + 10, // Di bawah AppBar
+            top: AppBar().preferredSize.height + 70, // Di bawah AppBar
             left: 0,
             right: 0,
             child: _isLoading || _errorMessage.isNotEmpty
@@ -866,7 +870,9 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
   // Widget Bagian Atas: Lokasi dan Waktu Salat Berikutnya
   Widget _buildHeaderContent() {
     return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
+        // Lokasi di tengah
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -880,54 +886,48 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
             ),
           ],
         ),
-        const SizedBox(height: 10),
-        Text(
-          _nextPrayer.isNotEmpty ? _nextPrayer : 'Jadwal Salat',
-          style: const TextStyle(
-              color: lightText, fontSize: 20, fontWeight: FontWeight.bold),
-          textAlign: TextAlign.center,
-        ),
+        const SizedBox(height: 15),
+        // Nama salat dan waktu dalam 1 baris, lebih besar dan timbul
         Text(
           _nextPrayer.isNotEmpty
-              ? '${_prayerTimes[_nextPrayer] ?? ''} WIB'
-              : '',
-          style: const TextStyle(
-              color: lightText, fontSize: 20, fontWeight: FontWeight.w500),
+              ? '$_nextPrayer ${_prayerTimes[_nextPrayer] ?? ''} WIB'
+              : 'Jadwal Salat',
+          style: TextStyle(
+            color: lightText,
+            fontSize: 26,
+            fontWeight: FontWeight.bold,
+            shadows: [
+              Shadow(
+                color: Colors.black.withOpacity(0.4),
+                offset: const Offset(1, 1),
+                blurRadius: 3,
+              ),
+            ],
+          ),
           textAlign: TextAlign.center,
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 15),
+        // Hitung mundur di tengah
         Text(
           _nextPrayer.isNotEmpty
               ? '- ${_formatDuration(_timeUntilNextPrayer)}'
               : '--:--:--',
-          style: const TextStyle(
+          style: TextStyle(
             color: lightText,
-            fontSize: 16,
+            fontSize: 22,
             fontWeight: FontWeight.bold,
             fontFeatures: [FontFeature.tabularFigures()],
+            shadows: [
+              Shadow(
+                color: Colors.black.withOpacity(0.4),
+                offset: const Offset(1, 1),
+                blurRadius: 3,
+              ),
+            ],
           ),
           textAlign: TextAlign.center,
         ),
-        const SizedBox(height: 12),
-        _buildUpdateKiblatRow(),
       ],
-    );
-  }
-
-  // Widget Baris Update dan Kiblat
-  Widget _buildUpdateKiblatRow() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 40.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          TextButton.icon(
-            onPressed: _updateLocation,
-            icon: const Icon(Icons.gps_fixed, color: lightText),
-            label: const Text('Update', style: TextStyle(color: lightText)),
-          ),
-        ],
-      ),
     );
   }
 
@@ -935,15 +935,15 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
   Widget _buildDateNavigationCard() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20.0),
-      padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 12.0),
+      padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 6.0),
       decoration: BoxDecoration(
         color: lightText,
-        borderRadius: BorderRadius.circular(5),
+        borderRadius: BorderRadius.circular(10),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 5,
-            offset: const Offset(0, 3),
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 2,
+            offset: const Offset(0, 1),
           ),
         ],
       ),
@@ -1063,7 +1063,15 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
       padding: EdgeInsets.only(bottom: 20.0),
       child: Column(
         children: [
-          // Footer note removed as per user request
+          Text(
+            'Waktu Shalat di Ambil dari Api.Aladhan',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey,
+              fontStyle: FontStyle.italic,
+            ),
+            textAlign: TextAlign.center,
+          ),
         ],
       ),
     );

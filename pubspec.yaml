@@ -40,9 +40,6 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/images/logo.apk.png
-    - assets/images/jadwal sholat.jpg
-    - assets/images/artikel.jpg
-    - assets/images/wirid dan doa.jpg
+    - assets/images/
     - assets/silhouette.png
  

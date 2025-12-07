@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/colors.dart';
-import '../main.dart';
+import '../main.dart' as main;
 import '../services/notification_service.dart';
 import '../widgets/background_widget.dart';
 import 'package:flutter/services.dart';
@@ -56,23 +56,67 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  // Fungsi untuk menghapus semua data dan navigasi ke Onboarding
-  Future<void> _resetApp(BuildContext context) async {
-    final bool? confirm = await showDialog<bool>(
+  Future<void> _changeSuciHabits(BuildContext context) async {
+    final TextEditingController controller = TextEditingController();
+    final prefs = await SharedPreferences.getInstance();
+    final current = prefs.getInt('suci_habits') ?? 14;
+    controller.text = current.toString();
+
+    final result = await showDialog<int>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Reset Aplikasi'),
+        title: const Text('Ubah Kebiasaan Suci'),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(
+            labelText: 'Rata-rata hari suci',
+            hintText: 'Masukkan angka hari',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () {
+              final value = int.tryParse(controller.text);
+              if (value != null && value > 0) {
+                Navigator.of(context).pop(value);
+              }
+            },
+            child: const Text('Simpan'),
+          ),
+        ],
+      ),
+    );
+
+    if (result != null) {
+      await prefs.setInt('suci_habits', result);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Kebiasaan suci berhasil diubah')),
+        );
+      }
+    }
+  }
+
+  Future<void> _deleteAllCycleHistory(BuildContext context) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Hapus Semua Riwayat Siklus'),
         content: const Text(
-            'Apakah Anda yakin ingin menghapus semua data (nama, riwayat siklus, dll.)? Tindakan ini tidak dapat dibatalkan.'),
+            'Apakah Anda yakin ingin menghapus semua riwayat siklus haid? Tindakan ini tidak dapat dibatalkan.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Batal', style: TextStyle(color: Colors.black)),
+            child: const Text('Batal'),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child:
-                const Text('Hapus Data', style: TextStyle(color: Colors.black)),
+            child: const Text('Hapus'),
           ),
         ],
       ),
@@ -80,27 +124,64 @@ class _SettingsPageState extends State<SettingsPage> {
 
     if (confirm == true) {
       try {
-        // Hapus SharedPreferences
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.clear();
-
-        // Hapus Hive Boxes (Asumsikan HaidRecordBox)
-        await haidService
-            .clearAllRecords(); // Asumsikan HaidService memiliki fungsi ini
-
-        // Navigasi ke Onboarding
+        await main.haidService.clearAllRecords();
         if (context.mounted) {
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (context) => const NameInputScreen()),
-            (Route<dynamic> route) => false,
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('Semua riwayat siklus berhasil dihapus')),
           );
         }
       } catch (e) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Gagal mereset data: $e')),
+            SnackBar(content: Text('Gagal menghapus riwayat: $e')),
           );
         }
+      }
+    }
+  }
+
+  Future<void> _changeUserName(BuildContext context) async {
+    final TextEditingController controller = TextEditingController();
+    final prefs = await SharedPreferences.getInstance();
+    final current = prefs.getString(userNameKey) ?? 'Pengguna';
+    controller.text = current;
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Ubah Nama Pengguna'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            labelText: 'Nama panggilan',
+            hintText: 'Masukkan nama baru',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () {
+              final name = controller.text.trim();
+              if (name.isNotEmpty) {
+                Navigator.of(context).pop(name);
+              }
+            },
+            child: const Text('Simpan'),
+          ),
+        ],
+      ),
+    );
+
+    if (result != null) {
+      await prefs.setString(userNameKey, result);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Nama pengguna berhasil diubah')),
+        );
       }
     }
   }
@@ -124,10 +205,12 @@ class _SettingsPageState extends State<SettingsPage> {
                 IconButton(
                   icon: const Icon(Icons.copy),
                   onPressed: () async {
-                    await Clipboard.setData(const ClipboardData(text: '081918151339'));
+                    await Clipboard.setData(
+                        const ClipboardData(text: '081918151339'));
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Nomor WhatsApp berhasil disalin')),
+                        const SnackBar(
+                            content: Text('Nomor WhatsApp berhasil disalin')),
                       );
                     }
                   },
@@ -146,7 +229,8 @@ class _SettingsPageState extends State<SettingsPage> {
                 IconButton(
                   icon: const Icon(Icons.copy),
                   onPressed: () async {
-                    await Clipboard.setData(const ClipboardData(text: 'ifqohululum@gmail.com'));
+                    await Clipboard.setData(
+                        const ClipboardData(text: 'ifqohululum@gmail.com'));
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Email berhasil disalin')),
@@ -203,6 +287,28 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             const Divider(),
             ListTile(
+              leading: const Icon(Icons.edit, color: primaryColor),
+              title: const Text('Ubah Kebiasaan Haid',
+                  style: TextStyle(color: Colors.black)),
+              subtitle: const Text('Mengubah rata-rata hari suci dalam siklus'),
+              onTap: () => _changeSuciHabits(context),
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_sweep, color: primaryColor),
+              title: const Text('Hapus Semua Riwayat Siklus',
+                  style: TextStyle(color: Colors.black)),
+              subtitle: const Text('Menghapus semua data riwayat siklus haid'),
+              onTap: () => _deleteAllCycleHistory(context),
+            ),
+            ListTile(
+              leading: const Icon(Icons.person, color: primaryColor),
+              title: const Text('Ubah Nama Pengguna',
+                  style: TextStyle(color: Colors.black)),
+              subtitle: const Text('Mengubah nama panggilan Anda'),
+              onTap: () => _changeUserName(context),
+            ),
+            const Divider(),
+            ListTile(
               leading: const Icon(Icons.info_outline, color: primaryColor),
               title: const Text('Tentang Aplikasi',
                   style: TextStyle(color: Colors.black)),
@@ -216,16 +322,6 @@ class _SettingsPageState extends State<SettingsPage> {
               title: const Text('Beri Masukan',
                   style: TextStyle(color: Colors.black)),
               onTap: () => _showFeedbackDialog(context),
-            ),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.delete_forever, color: secondaryColor),
-              title: const Text('Reset Data Aplikasi',
-                  style: TextStyle(
-                      color: Colors.black, fontWeight: FontWeight.bold)),
-              subtitle: const Text(
-                  'Menghapus semua riwayat siklus dan nama pengguna.'),
-              onTap: () => _resetApp(context),
             ),
             const Divider(),
           ],

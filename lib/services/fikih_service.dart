@@ -1,26 +1,63 @@
 import '../models/haid_record.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class FikihService {
-  String _getFinalStatus(HaidRecord record) {
-    // Hitung durasi total dalam jam
-    final duration = record.endDate!.difference(record.startDate).inHours;
+  Map<String, dynamic> _getFinalStatus(HaidRecord record) {
+    // Hitung durasi total dalam jam dari start sampai end
+    final totalDurationDays =
+        record.endDate!.difference(record.startDate).inDays + 1;
+
+    // Hitung jumlah event yang dicatat (setiap event = 1 jam)
+    final loggedHours = record.bloodEvents.length;
 
     // Batasan Fikih
-    const int minHaidHours = 24; // 1 Hari
-    const int maxHaidHours = 360; // 15 Hari
+    const int minHaidHours = 24; // Minimal haid 24 jam
+    const int maxHaidDays = 15; // Maksimal haid 15 hari
 
-    // 1. Durasi Kurang dari Minimal Haid
-    if (duration < minHaidHours) {
-      return 'ISTIHADAH (Kurang dari 24 Jam)';
+    // Scenario 1: Normal Haid (24+ jam dalam 15 hari)
+    if (totalDurationDays <= maxHaidDays && loggedHours >= minHaidHours) {
+      return {
+        'status': 'HAID SELAMA $totalDurationDays HARI',
+        'type': 'HAID',
+        'haidDays': totalDurationDays,
+        'istihadahDays': 0,
+        'predictionDays': totalDurationDays,
+      };
     }
 
-    // 2. Durasi Melebihi Maksimal Haid
-    if (duration > maxHaidHours) {
-      return 'ISTIHADAH (Melebihi 15 Hari)';
+    // Scenario 2: Istihaadah < 24 jam
+    if (totalDurationDays <= maxHaidDays && loggedHours < minHaidHours) {
+      return {
+        'status': 'ISTIHADAH KURANG DARI 24 JAM',
+        'type': 'ISTIHADAH_SHORT',
+        'haidDays': 1,
+        'istihadahDays': totalDurationDays - 1,
+        'predictionDays': 1,
+        'message':
+            'Karena kurang dari 24 jam maka haid anda adalah 1 hari. Silahkan Qadha\' sholat dan puasa jika ditinggalkan',
+      };
     }
 
-    // 3. Lolos Batas Minimum dan Maksimum
-    return 'HAID';
+    // Scenario 3: Istihaadah > 15 hari
+    if (totalDurationDays > maxHaidDays) {
+      return {
+        'status': 'ISTIHADAH LEBIH DARI 15 HARI',
+        'type': 'ISTIHADAH_LONG',
+        'haidDays': maxHaidDays,
+        'istihadahDays': totalDurationDays - maxHaidDays,
+        'predictionDays': maxHaidDays,
+        'message': 'Haid anda adalah 15 hari. Selebihnya istihadah',
+      };
+    }
+
+    // Default fallback
+    return {
+      'status': 'HAID',
+      'type': 'HAID',
+      'haidDays': totalDurationDays,
+      'istihadahDays': 0,
+      'predictionDays': totalDurationDays,
+    };
   }
 
 // --- 2. Mendapatkan Status Hukum untuk tanggal tertentu ---
@@ -45,7 +82,8 @@ class FikihService {
 
         if ((checkDate.isAtSameMomentAs(start) || checkDate.isAfter(start)) &&
             (checkDate.isBefore(end) || checkDate.isAtSameMomentAs(end))) {
-          return _getFinalStatus(record);
+          final statusMap = _getFinalStatus(record);
+          return statusMap['status'] as String;
         }
       }
     }
@@ -53,95 +91,98 @@ class FikihService {
     return 'SUCI';
   }
 
-// Siklus dihitung dari endDate siklus sebelumnya hingga endDate siklus ini.
-  List<int> _calculateCycleLengths(List<HaidRecord> completedRecords) {
-    // Hanya proses record yang sudah memiliki endDate
+  // --- Mendapatkan Detail Status Lengkap ---
+  Map<String, dynamic> getDetailedHukumStatus(
+      DateTime date, List<HaidRecord> allRecords) {
+    if (allRecords.isEmpty) {
+      return {'status': 'SUCI (Belum ada riwayat)', 'type': 'SUCI'};
+    }
+
+    final checkDate = DateTime(date.year, date.month, date.day);
+
+    for (var record in allRecords) {
+      final start = DateTime(
+          record.startDate.year, record.startDate.month, record.startDate.day);
+
+      if (record.endDate == null) {
+        if (checkDate.isAtSameMomentAs(start) || checkDate.isAfter(start)) {
+          return {'status': 'HAID SEMENTARA', 'type': 'HAID_SEMENTARA'};
+        }
+      } else {
+        final end = DateTime(
+            record.endDate!.year, record.endDate!.month, record.endDate!.day);
+
+        if ((checkDate.isAtSameMomentAs(start) || checkDate.isAfter(start)) &&
+            (checkDate.isBefore(end) || checkDate.isAtSameMomentAs(end))) {
+          return _getFinalStatus(record);
+        }
+      }
+    }
+
+    return {'status': 'SUCI', 'type': 'SUCI'};
+  }
+
+// Hitung rata-rata durasi haid berdasarkan aturan baru
+  double _calculateAverageHaidLength(List<HaidRecord> completedRecords) {
     final validRecords =
         completedRecords.where((r) => r.endDate != null).toList();
+    if (validRecords.isEmpty) return 0.0;
 
-    // Urutkan dari yang paling lama ke yang paling baru
-    validRecords.sort((a, b) => a.startDate.compareTo(b.startDate));
+    final totalPredictionDays = validRecords.map((r) {
+      final statusMap = _getFinalStatus(r);
+      return statusMap['predictionDays'] as int;
+    }).reduce((a, b) => a + b);
 
-    if (validRecords.length < 2) {
-      return []; // Minimal butuh 2 data untuk menghitung 1 siklus
-    }
-
-    List<int> cycleLengths = [];
-
-    // Siklus dihitung dari startDate satu record ke startDate record berikutnya.
-    for (int i = 1; i < validRecords.length; i++) {
-      final startCurrent = validRecords[i].startDate;
-      final startPrevious = validRecords[i - 1].startDate;
-
-      final length = startCurrent.difference(startPrevious).inDays;
-      if (length > 0) {
-        cycleLengths.add(length);
-      }
-    }
-
-    return cycleLengths;
+    return totalPredictionDays / validRecords.length;
   }
 
-// --- FUNGSI BANTU UNTUK ML: Regresi Linier Sederhana ---
-// Menggunakan rumus Y = a + bX
-  double _simpleLinearRegression(List<int> data, bool isSlope) {
-    if (data.length < 2) return 0.0;
+// --- FUNGSI UTAMA PREDIKSI MENGGUNAKAN REGRESI LINIER SEDERHANA ---
+  Future<DateTime?> getNextPredictedStartDate(
+      List<HaidRecord> allRecords) async {
+    final completedRecords =
+        allRecords.where((r) => r.endDate != null).toList();
+    if (completedRecords.isEmpty) return null;
 
-    final x = List<double>.generate(data.length, (i) => (i + 1).toDouble());
-    final y = data.map((d) => d.toDouble()).toList();
+    final latestEndDate = completedRecords.last.endDate!;
+    final prefs = await SharedPreferences.getInstance();
+    final suciHabits =
+        prefs.getInt('suci_habits') ?? 14; // Default 14 hari suci
 
-    final n = data.length;
-    final sumX = x.reduce((a, b) => a + b);
-    final sumY = y.reduce((a, b) => a + b);
-    final sumX2 = x.map((xi) => xi * xi).reduce((a, b) => a + b);
-    final sumXY = x
-        .asMap()
-        .entries
-        .map((e) => e.value * y[e.key])
+    // Jika hanya 1 record, gunakan rata-rata sederhana
+    if (completedRecords.length < 2) {
+      final averageHaidLength = _calculateAverageHaidLength(completedRecords);
+      final predictedCycleLength = averageHaidLength + suciHabits;
+      return latestEndDate.add(Duration(days: predictedCycleLength.round()));
+    }
+
+    // Hitung panjang siklus historis: Y = haid_days + suci_habits
+    final cycleLengths = <double>[];
+    for (int i = 0; i < completedRecords.length; i++) {
+      final record = completedRecords[i];
+      final statusMap = _getFinalStatus(record);
+      final haidDays = statusMap['predictionDays'] as int;
+      final cycleLength = haidDays + suciHabits;
+      cycleLengths.add(cycleLength.toDouble());
+    }
+
+    // X = urutan siklus (1, 2, 3, ...)
+    final n = cycleLengths.length;
+    final xValues = List<double>.generate(n, (i) => (i + 1).toDouble());
+
+    // Hitung regresi linier: Y = a + bX
+    final sumX = xValues.reduce((a, b) => a + b);
+    final sumY = cycleLengths.reduce((a, b) => a + b);
+    final sumXY = List<double>.generate(n, (i) => xValues[i] * cycleLengths[i])
         .reduce((a, b) => a + b);
+    final sumX2 = xValues.map((x) => x * x).reduce((a, b) => a + b);
 
-    final meanX = sumX / n;
-    final meanY = sumY / n;
+    final b = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+    final a = (sumY - b * sumX) / n;
 
-    final numerator = sumXY - (sumX * sumY) / n;
-    final denominator = sumX2 - (sumX * sumX) / n;
+    // Prediksi untuk siklus berikutnya: X_next = n + 1
+    final xNext = (n + 1).toDouble();
+    final predictedCycleLength = a + b * xNext;
 
-    final b = (denominator == 0) ? 0.0 : numerator / denominator;
-
-    final a = meanY - b * meanX;
-
-    return isSlope ? b : a;
-  }
-
-// --- FUNGSI UTAMA PREDIKSI ML ---
-  DateTime? getNextPredictedStartDate(List<HaidRecord> allRecords) {
-    final cycleLengths = _calculateCycleLengths(allRecords);
-
-    if (cycleLengths.length < 3) {
-      final latestEndDate = allRecords
-          .lastWhere((r) => r.endDate != null,
-              orElse: () => HaidRecord(startDate: DateTime.now()))
-          .endDate;
-      if (latestEndDate == null) return null;
-
-      if (cycleLengths.isNotEmpty) {
-        final averageLength =
-            cycleLengths.reduce((a, b) => a + b) / cycleLengths.length;
-        return latestEndDate.add(Duration(days: averageLength.round()));
-      }
-
-      return latestEndDate.add(const Duration(days: 28)); // Rata-rata default
-    }
-
-    final b = _simpleLinearRegression(cycleLengths, true); // Slope
-    final a = _simpleLinearRegression(cycleLengths, false); // Intercept
-
-    final nextX = (cycleLengths.length + 1).toDouble();
-    final predictedLength = a + b * nextX;
-
-    final latestStartDate =
-        allRecords.lastWhere((r) => r.endDate != null).startDate;
-
-    return latestStartDate.add(Duration(days: predictedLength.round()));
+    return latestEndDate.add(Duration(days: predictedCycleLength.round()));
   }
 }

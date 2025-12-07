@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/haid_record.dart';
 import '../services/fikih_service.dart';
+import '../constants/colors.dart';
 
 class MonthlyCalendarGrid extends StatelessWidget {
   final DateTime focusedDay;
@@ -25,64 +26,53 @@ class MonthlyCalendarGrid extends StatelessWidget {
 
     // 1. Cek Prediksi
     if (predictedDate != null) {
-      final startPrediction = DateTime(
+      final predictionDay = DateTime(
           predictedDate!.year, predictedDate!.month, predictedDate!.day);
-      final endPrediction = startPrediction.add(const Duration(days: 7));
 
-      if ((normalizedDay.isAtSameMomentAs(startPrediction) ||
-              normalizedDay.isAfter(startPrediction)) &&
-          normalizedDay.isBefore(endPrediction)) {
-        return Colors.pink.shade200; // Warna prediksi soft pink
+      if (normalizedDay.isAtSameMomentAs(predictionDay)) {
+        return predictionColor; // Warna prediksi kuning
       }
     }
 
-    // 2. Cek Riwayat Haid (Riwayat Haid & Istihadah)
-    final isHaidPeriod = records.any((record) {
+    // 2. Cek Riwayat Haid dengan logic baru
+    for (final record in records) {
+      if (record.endDate == null) continue; // Skip ongoing records
+
       final recordStart = DateTime(
           record.startDate.year, record.startDate.month, record.startDate.day);
+      final recordEnd = DateTime(
+          record.endDate!.year, record.endDate!.month, record.endDate!.day);
 
-      // Batas Akhir: Tanggal endDate jika ada, atau Tanggal Hari Ini jika masih aktif.
-      final recordEnd = record.endDate != null
-          ? DateTime(
-              record.endDate!.year, record.endDate!.month, record.endDate!.day)
-          : DateTime.now();
-
-      // Cek apakah hari ini ada dalam rentang Haid/Istihadah
-      return (normalizedDay.isAtSameMomentAs(recordStart) ||
+      // Cek apakah hari ini dalam rentang record ini
+      if ((normalizedDay.isAtSameMomentAs(recordStart) ||
               normalizedDay.isAfter(recordStart)) &&
-          (normalizedDay.isBefore(recordEnd.add(const Duration(days: 1))));
-    });
+          (normalizedDay.isAtSameMomentAs(recordEnd) ||
+              normalizedDay.isBefore(recordEnd.add(const Duration(days: 1))))) {
+        // Dapatkan detail status lengkap
+        final statusDetail =
+            fikihService.getDetailedHukumStatus(normalizedDay, [record]);
+        final statusType = statusDetail['type'] as String;
+        final haidDays = statusDetail['haidDays'] as int? ?? 0;
 
-    if (isHaidPeriod) {
-      // Logic complex: Cek apakah hari ini berada dalam periode Haid yang sudah divalidasi
-      final relevantRecord = records.firstWhere(
-        (r) =>
-            (r.endDate != null) &&
-            normalizedDay.isAfter(
-                DateTime(r.startDate.year, r.startDate.month, r.startDate.day)
-                    .subtract(const Duration(days: 1))) &&
-            normalizedDay.isBefore(r.endDate!.add(const Duration(days: 1))),
-        orElse: () => records.firstWhere(
-          (r) =>
-              r.endDate == null &&
-              normalizedDay.isAfter(
-                  DateTime(r.startDate.year, r.startDate.month, r.startDate.day)
-                      .subtract(const Duration(days: 1))),
-          orElse: () => HaidRecord(
-              startDate: DateTime(2000), endDate: DateTime(2000)), // Fallback
-        ),
-      );
+        // Hitung hari ke berapa dalam siklus ini
+        final dayIndex = normalizedDay.difference(recordStart).inDays;
 
-      if (relevantRecord.endDate != null) {
-        final statusFinal =
-            fikihService.getHukumStatus(normalizedDay, [relevantRecord]);
-
-        if (statusFinal.startsWith('ISTIHADAH')) {
-          return Colors.green; // Warna Istihadah hijau
+        // Logika pewarnaan berdasarkan scenario
+        if (statusType == 'HAID') {
+          // Scenario 1: Semua hari adalah haid
+          return menstrualColor; // Merah
+        } else if (statusType == 'ISTIHADAH_SHORT') {
+          // Scenario 2: Hari pertama = haid, sisanya = istihadah
+          return dayIndex == 0
+              ? menstrualColor
+              : istihadahColor; // Merah : Hijau
+        } else if (statusType == 'ISTIHADAH_LONG') {
+          // Scenario 3: 15 hari pertama = haid, sisanya = istihadah
+          return dayIndex < haidDays
+              ? menstrualColor
+              : istihadahColor; // Merah : Hijau
         }
       }
-
-      return Colors.red; // Warna riwayat Haid merah
     }
 
     return null;
