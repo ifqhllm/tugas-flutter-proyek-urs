@@ -64,7 +64,7 @@ class NotificationService {
           playSound: true,
           enableVibration: true,
           sound: RawResourceAndroidNotificationSound(
-              'azan'), // Ganti 'azan' jika Anda memiliki file suara kustom
+              'adzan_sound'), // Menggunakan file suara adzan kustom
         ),
       );
 
@@ -76,6 +76,7 @@ class NotificationService {
           importance: Importance.high,
           playSound: true,
           enableVibration: true,
+          sound: RawResourceAndroidNotificationSound('reminder_sound'),
         ),
       );
     }
@@ -289,7 +290,7 @@ class NotificationService {
           channelDescription: 'Pengingat rutin untuk pencatatan',
           importance: Importance.high,
           priority: Priority.high,
-          sound: RawResourceAndroidNotificationSound('default'),
+          sound: RawResourceAndroidNotificationSound('reminder_sound'),
           enableVibration: true,
           actions: [
             // Tambahkan aksi notifikasi

@@ -930,67 +930,97 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                                   ],
                                 ),
                                 const SizedBox(height: 12),
-                                ...record.bloodEvents.map((event) {
-                                  final eventTime =
-                                      '${event.timestamp.day}/${event.timestamp.month}/${event.timestamp.year} ${event.timestamp.hour}:${event.timestamp.minute.toString().padLeft(2, '0')}';
-                                  return Padding(
-                                    padding: const EdgeInsets.only(bottom: 4.0),
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            '$eventTime - ${event.type}',
-                                            style: const TextStyle(
-                                              fontSize: 14,
-                                              color: textColor,
+                                // Scrollable container for blood events (max 4 recent)
+                                Container(
+                                  height:
+                                      120, // Fixed height for scrollable area
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade50,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                        color: Colors.grey.withOpacity(0.3),
+                                        width: 1),
+                                  ),
+                                  child: SingleChildScrollView(
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Column(
+                                        children: record.bloodEvents.reversed
+                                            .take(4)
+                                            .map((event) {
+                                          final eventTime =
+                                              '${event.timestamp.day}/${event.timestamp.month}/${event.timestamp.year} ${event.timestamp.hour}:${event.timestamp.minute.toString().padLeft(2, '0')}';
+                                          return Padding(
+                                            padding: const EdgeInsets.only(
+                                                bottom: 4.0),
+                                            child: Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment
+                                                      .spaceBetween,
+                                              children: [
+                                                Expanded(
+                                                  child: Text(
+                                                    '$eventTime - ${event.type}',
+                                                    style: const TextStyle(
+                                                      fontSize: 14,
+                                                      color: textColor,
+                                                    ),
+                                                  ),
+                                                ),
+                                                IconButton(
+                                                  icon: const Icon(Icons.delete,
+                                                      size: 16,
+                                                      color: primaryColor),
+                                                  onPressed: () async {
+                                                    final confirm =
+                                                        await showDialog<bool>(
+                                                      context: context,
+                                                      builder: (context) =>
+                                                          AlertDialog(
+                                                        title: const Text(
+                                                            'Hapus Pencatatan'),
+                                                        content: const Text(
+                                                            'Apakah Anda yakin ingin menghapus pencatatan darah ini?'),
+                                                        actions: [
+                                                          TextButton(
+                                                            onPressed: () =>
+                                                                Navigator.of(
+                                                                        context)
+                                                                    .pop(false),
+                                                            child: const Text(
+                                                                'Batal'),
+                                                          ),
+                                                          TextButton(
+                                                            onPressed: () =>
+                                                                Navigator.of(
+                                                                        context)
+                                                                    .pop(true),
+                                                            child: const Text(
+                                                                'Hapus'),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    );
+                                                    if (confirm == true) {
+                                                      final eventIndex = record
+                                                          .bloodEvents
+                                                          .indexOf(event);
+                                                      await haidService
+                                                          .deleteBloodEvent(
+                                                              record,
+                                                              eventIndex);
+                                                      await _loadCurrentRecord();
+                                                    }
+                                                  },
+                                                ),
+                                              ],
                                             ),
-                                          ),
-                                        ),
-                                        IconButton(
-                                          icon: const Icon(Icons.delete,
-                                              size: 16, color: primaryColor),
-                                          onPressed: () async {
-                                            final confirm =
-                                                await showDialog<bool>(
-                                              context: context,
-                                              builder: (context) => AlertDialog(
-                                                title: const Text(
-                                                    'Hapus Pencatatan'),
-                                                content: const Text(
-                                                    'Apakah Anda yakin ingin menghapus pencatatan darah ini?'),
-                                                actions: [
-                                                  TextButton(
-                                                    onPressed: () =>
-                                                        Navigator.of(context)
-                                                            .pop(false),
-                                                    child: const Text('Batal'),
-                                                  ),
-                                                  TextButton(
-                                                    onPressed: () =>
-                                                        Navigator.of(context)
-                                                            .pop(true),
-                                                    child: const Text('Hapus'),
-                                                  ),
-                                                ],
-                                              ),
-                                            );
-                                            if (confirm == true) {
-                                              final eventIndex = record
-                                                  .bloodEvents
-                                                  .indexOf(event);
-                                              await haidService
-                                                  .deleteBloodEvent(
-                                                      record, eventIndex);
-                                              await _loadCurrentRecord();
-                                            }
-                                          },
-                                        ),
-                                      ],
+                                          );
+                                        }).toList(),
+                                      ),
                                     ),
-                                  );
-                                }).toList(),
+                                  ),
+                                ),
                               ],
                             ),
                           );
