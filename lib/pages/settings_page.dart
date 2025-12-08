@@ -153,6 +153,7 @@ class _SettingsPageState extends State<SettingsPage> {
         title: const Text('Ubah Nama Pengguna'),
         content: TextField(
           controller: controller,
+          maxLength: 10,
           decoration: const InputDecoration(
             labelText: 'Nama panggilan',
             hintText: 'Masukkan nama baru',

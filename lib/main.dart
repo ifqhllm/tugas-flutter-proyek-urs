@@ -121,6 +121,7 @@ class _NameInputScreenState extends State<NameInputScreen> {
                 const SizedBox(height: 40),
                 TextField(
                   controller: _nameController,
+                  maxLength: 10,
                   decoration: InputDecoration(
                     labelText: 'Nama Panggilan',
                     fillColor: Colors.white,
