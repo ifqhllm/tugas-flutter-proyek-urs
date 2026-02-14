@@ -53,21 +53,6 @@ class NotificationService {
 
     if (androidPlugin != null) {
       await androidPlugin.requestNotificationsPermission();
-
-      await androidPlugin.createNotificationChannel(
-        const AndroidNotificationChannel(
-          'prayer_channel',
-          'Waktu Shalat',
-          description: 'Notifikasi untuk waktu shalat (Adzan)',
-          importance:
-              Importance.max, // Penting agar notifikasi muncul sebagai Heads-up
-          playSound: true,
-          enableVibration: true,
-          sound: RawResourceAndroidNotificationSound(
-              'adzan_sound'), // Menggunakan file suara adzan kustom
-        ),
-      );
-
       await androidPlugin.createNotificationChannel(
         const AndroidNotificationChannel(
           'reminder_channel',
@@ -82,83 +67,12 @@ class NotificationService {
     }
   }
 
-  Future<void> cancelPrayerNotifications() async {
-    final List<PendingNotificationRequest> pending =
-        await flutterLocalNotificationsPlugin.pendingNotificationRequests();
 
-    for (var notification in pending) {
-      if (notification.id != 999999) {
-        await flutterLocalNotificationsPlugin.cancel(notification.id);
-        debugPrint('Canceled prayer notification ID: ${notification.id}');
-      }
-    }
-  }
 
   Future<void> cancelRecordingReminder() async {
     await flutterLocalNotificationsPlugin.cancel(999999);
   }
 
-  Future<void> cancelAllNotifications() async {
-    await flutterLocalNotificationsPlugin.cancelAll();
-  }
-
-  Future<void> _scheduleSinglePrayerNotification(
-      String prayerName, DateTime prayerTime, int notificationId) async {
-    final prefs = await SharedPreferences.getInstance();
-    final notificationsEnabled = prefs.getBool('prayer_notifications') ?? true;
-
-    if (!notificationsEnabled) return;
-
-    final now = DateTime.now();
-    if (prayerTime.isBefore(now)) return;
-
-    final scheduledTime = tz.TZDateTime.from(prayerTime, tz.local);
-
-    await flutterLocalNotificationsPlugin.zonedSchedule(
-      notificationId, // Menggunakan ID yang dilewatkan
-      'Waktu Shalat $prayerName',
-      'Saatnya melaksanakan shalat $prayerName',
-      scheduledTime,
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          'prayer_channel',
-          'Waktu Shalat',
-          channelDescription: 'Notifikasi untuk waktu shalat',
-          importance: Importance.max,
-          priority: Priority.max,
-          enableVibration: true,
-        ),
-      ),
-      androidAllowWhileIdle: true,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-    );
-    debugPrint('Scheduled $prayerName (ID: $notificationId) at $scheduledTime');
-  }
-
-  Future<void> scheduleAllPrayersForTheDay(
-      Map<String, DateTime> allPrayerTimes) async {
-    await cancelPrayerNotifications();
-
-    final Map<String, int> prayerIdMap = {
-      'Shubuh': 1,
-      'Dhuhur': 2,
-      'Ashar': 3,
-      'Maghrib': 4,
-      'Isya': 5,
-    };
-
-    int scheduledCount = 0;
-
-    // B. Loop dan Jadwalkan setiap waktu shalat
-    allPrayerTimes.forEach((name, time) {
-      final notificationId = prayerIdMap[name] ?? name.hashCode;
-      _scheduleSinglePrayerNotification(name, time, notificationId);
-      scheduledCount++;
-    });
-
-    debugPrint('Total ${scheduledCount} notifikasi shalat dijadwalkan ulang.');
-  }
 
   Future<void> scheduleDailyRecordingReminder() async {
     await cancelRecordingReminder();

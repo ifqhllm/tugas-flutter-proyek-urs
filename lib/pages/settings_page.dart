@@ -14,36 +14,7 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  bool _prayerNotificationsEnabled = true;
   bool _recordingReminderEnabled = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadSettings();
-  }
-
-  Future<void> _loadSettings() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _prayerNotificationsEnabled =
-          prefs.getBool('prayer_notifications') ?? true;
-      _recordingReminderEnabled = prefs.getBool('recording_reminder') ?? true;
-    });
-  }
-
-  Future<void> _updatePrayerNotifications(bool value) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('prayer_notifications', value);
-    setState(() {
-      _prayerNotificationsEnabled = value;
-    });
-    // If disabled, cancel existing notifications
-    if (!value) {
-      await NotificationService().cancelPrayerNotifications();
-    }
-  }
-
   Future<void> _updateRecordingReminder(bool value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('recording_reminder', value);
@@ -53,52 +24,6 @@ class _SettingsPageState extends State<SettingsPage> {
     // If disabled, cancel existing reminder
     if (!value) {
       await NotificationService().cancelRecordingReminder();
-    }
-  }
-
-  Future<void> _changeSuciHabits(BuildContext context) async {
-    final TextEditingController controller = TextEditingController();
-    final prefs = await SharedPreferences.getInstance();
-    final current = prefs.getInt('suci_habits') ?? 14;
-    controller.text = current.toString();
-
-    final result = await showDialog<int>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Ubah Kebiasaan Suci'),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(
-            labelText: 'Rata-rata hari suci',
-            hintText: 'Masukkan angka hari',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Batal'),
-          ),
-          TextButton(
-            onPressed: () {
-              final value = int.tryParse(controller.text);
-              if (value != null && value > 0) {
-                Navigator.of(context).pop(value);
-              }
-            },
-            child: const Text('Simpan'),
-          ),
-        ],
-      ),
-    );
-
-    if (result != null) {
-      await prefs.setInt('suci_habits', result);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Kebiasaan suci berhasil diubah')),
-        );
-      }
     }
   }
 
@@ -271,14 +196,6 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             const SizedBox(height: 10),
             SwitchListTile(
-              title: const Text('Notifikasi Waktu Shalat',
-                  style: TextStyle(color: Colors.black)),
-              subtitle:
-                  const Text('Dapatkan notifikasi saat waktu shalat tiba'),
-              value: _prayerNotificationsEnabled,
-              onChanged: _updatePrayerNotifications,
-            ),
-            SwitchListTile(
               title: const Text('Pengingat Pencatatan Harian',
                   style: TextStyle(color: Colors.black)),
               subtitle:
@@ -287,13 +204,6 @@ class _SettingsPageState extends State<SettingsPage> {
               onChanged: _updateRecordingReminder,
             ),
             const Divider(),
-            ListTile(
-              leading: const Icon(Icons.edit, color: primaryColor),
-              title: const Text('Ubah Kebiasaan Haid',
-                  style: TextStyle(color: Colors.black)),
-              subtitle: const Text('Mengubah rata-rata hari suci dalam siklus'),
-              onTap: () => _changeSuciHabits(context),
-            ),
             ListTile(
               leading: const Icon(Icons.delete_sweep, color: primaryColor),
               title: const Text('Hapus Semua Riwayat Siklus',

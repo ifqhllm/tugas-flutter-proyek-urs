@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/fikih_service.dart';
 import '../services/haid_service.dart';
 import '../services/notification_service.dart';
 import '../models/haid_record.dart';
 import '../constants/colors.dart';
 import '../widgets/background_widget.dart';
-import 'prayer_times_page.dart';
 import 'wirid_and_dua_page.dart';
 import 'articles_page.dart' as articles;
 import 'qa_page.dart';
+import 'six_records_form.dart';
 
 final FikihService fikihService = FikihService();
 final HaidService haidService = HaidService();
@@ -39,6 +40,22 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
   void initState() {
     super.initState();
     _loadCurrentRecord();
+  }
+
+  Future<Map<String, dynamic>> _getPredictionPanelData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final haidStatus = prefs.getString('haid_status') ?? 'Sudah Biasa';
+    final predictionCompleted = prefs.getBool('prediction_completed') ?? false;
+    final predictionSkipped = prefs.getBool('prediction_skipped') ?? false;
+    final hasActiveRecord =
+        _currentRecord != null && _currentRecord.endDate == null;
+
+    return {
+      'haidStatus': haidStatus,
+      'predictionCompleted': predictionCompleted,
+      'predictionSkipped': predictionSkipped,
+      'hasActiveRecord': hasActiveRecord,
+    };
   }
 
   Future<void> _loadCurrentRecord() async {
@@ -473,17 +490,12 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                 ),
                 const SizedBox(height: 25),
 
-                // --- MENU CEPAT (4 Tombol Gambar) ---
+                // --- MENU CEPAT (3 Tombol Gambar) ---
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 0),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      _buildNavButton(
-                          context,
-                          'assets/images/Jadwal Shalat.png',
-                          'Jadwal Shalat',
-                          const PrayerTimesPage()),
                       _buildNavButton(context, 'assets/images/Wirid & Doa.png',
                           'Wirid & Doa', const WiridAndDuaPage()),
                       _buildNavButton(context, 'assets/images/Article.png',
@@ -605,54 +617,122 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                       ),
                     ],
                   ),
-                  child: Column(
-                    children: [
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        decoration: BoxDecoration(
-                          color: secondaryColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                        child: Text(
-                          'Prediksi siklus berikutnya',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.black,
-                            fontWeight: FontWeight.w700,
-                            shadows: [
-                              Shadow(
-                                color: Colors.black.withOpacity(0.2),
-                                offset: const Offset(1, 1),
-                                blurRadius: 2,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 15),
-                      Text(
-                        _isLoading
-                            ? 'Memuat data prediksi...'
-                            : _nextPredictedDate == null
-                                ? 'Data kurang untuk prediksi akurat.'
-                                : 'Prediksi Haid: ${_nextPredictedDate!.day}/${_nextPredictedDate!.month}/${_nextPredictedDate!.year}',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: secondaryColor,
-                          shadows: [
-                            Shadow(
-                              color: Colors.black.withOpacity(0.2),
-                              offset: const Offset(1, 1),
-                              blurRadius: 2,
+                  child: FutureBuilder<Map<String, dynamic>>(
+                    future: _getPredictionPanelData(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(
+                          child: CircularProgressIndicator(color: primaryColor),
+                        );
+                      }
+
+                      final data = snapshot.data;
+                      final haidStatus = data?['haidStatus'] ?? 'Sudah Biasa';
+                      final predictionCompleted =
+                          data?['predictionCompleted'] ?? false;
+                      final predictionSkipped =
+                          data?['predictionSkipped'] ?? false;
+                      final hasActiveRecord = data?['hasActiveRecord'] ?? false;
+
+                      return Column(
+                        children: [
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            decoration: BoxDecoration(
+                              color: secondaryColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(15),
                             ),
-                          ],
-                        ),
-                      ),
-                    ],
+                            child: Text(
+                              'Prediksi siklus berikutnya',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.black,
+                                fontWeight: FontWeight.w700,
+                                shadows: [
+                                  Shadow(
+                                    color: Colors.black.withOpacity(0.2),
+                                    offset: const Offset(1, 1),
+                                    blurRadius: 2,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 15),
+                          if (haidStatus == 'Baru Mengalami')
+                            const Text(
+                              'Prediksi belum tersedia. Silakan catat haid pertama Anda.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.black87,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          if (haidStatus == 'Sudah Biasa' && predictionSkipped)
+                            Column(
+                              children: [
+                                const Text(
+                                  'Prediksi belum tersedia. Silahkan catat 6 riwayat sebelumnya',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.black87,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 15),
+                                ElevatedButton.icon(
+                                  onPressed: () {
+                                    showSixRecordsBottomSheet(
+                                        context, widget.userName);
+                                  },
+                                  icon: const Icon(Icons.edit),
+                                  label: const Text('Catat'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: secondaryColor,
+                                    foregroundColor: textColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          if (haidStatus == 'Sudah Biasa' &&
+                              predictionCompleted &&
+                              !hasActiveRecord)
+                            const Text(
+                              'Prediksi akan tersedia jika anda sudah mulai mencatat haid baru.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.black87,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          if (haidStatus == 'Sudah Biasa' &&
+                              predictionCompleted &&
+                              hasActiveRecord &&
+                              _nextPredictedDate != null)
+                            Text(
+                              'Prediksi Haid: ${_nextPredictedDate!.day}/${_nextPredictedDate!.month}/${_nextPredictedDate!.year}',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: secondaryColor,
+                                shadows: [
+                                  Shadow(
+                                    color: Colors.black.withOpacity(0.2),
+                                    offset: const Offset(1, 1),
+                                    blurRadius: 2,
+                                  ),
+                                ],
+                              ),
+                            ),
+                        ],
+                      );
+                    },
                   ),
                 ),
                 const SizedBox(height: 25),

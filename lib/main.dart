@@ -12,6 +12,7 @@ import 'widgets/background_widget.dart';
 import 'pages/calendar_page.dart';
 import 'pages/settings_page.dart';
 import 'pages/cycle_tracker_page.dart';
+import 'pages/six_records_form.dart';
 
 final FikihService fikihService = FikihService();
 final HaidService haidService = HaidService();
@@ -29,18 +30,17 @@ class NameInputScreen extends StatefulWidget {
 
 class _NameInputScreenState extends State<NameInputScreen> {
   final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _suciHabitsController = TextEditingController();
+  String? _selectedStatus;
 
   Future<void> _saveNameAndNavigate() async {
     final name = _nameController.text.trim();
-    final suciHabitsText = _suciHabitsController.text.trim();
-    if (name.isNotEmpty && suciHabitsText.isNotEmpty) {
-      final suciHabits = int.tryParse(suciHabitsText);
-      if (suciHabits != null && suciHabits > 0) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString(userNameKey, name);
-        await prefs.setInt('suci_habits', suciHabits);
+    if (name.isNotEmpty && _selectedStatus != null) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(userNameKey, name);
+      await prefs.setString('haid_status', _selectedStatus!);
 
+      if (_selectedStatus == 'Baru Mengalami') {
+        // Directly go to home page
         if (mounted) {
           Navigator.of(context).pushReplacement(
             PageRouteBuilder(
@@ -66,17 +66,75 @@ class _NameInputScreenState extends State<NameInputScreen> {
           );
         }
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Kebiasaan suci harus berupa angka positif.')),
-        );
+        // Show prediction question dialog
+        _showPredictionQuestionDialog(context, name);
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('Nama dan kebiasaan suci tidak boleh kosong.')),
+            content: Text('Nama dan status haid tidak boleh kosong.')),
       );
     }
+  }
+
+  void _showPredictionQuestionDialog(BuildContext context, String name) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Apakah anda ingin memprediksi haid berikutnya?'),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                // Go to home page, set prediction status as not started
+                SharedPreferences.getInstance().then((prefs) {
+                  prefs.setBool('prediction_skipped', true);
+                });
+                Navigator.of(context).pushReplacement(
+                  PageRouteBuilder(
+                    pageBuilder: (context, animation, secondaryAnimation) =>
+                        const MainScreen(),
+                    transitionsBuilder:
+                        (context, animation, secondaryAnimation, child) {
+                      const begin = Offset(1.0, 0.0);
+                      const end = Offset.zero;
+                      const curve = Curves.easeInOutCubic;
+
+                      var tween = Tween(begin: begin, end: end)
+                          .chain(CurveTween(curve: curve));
+                      var offsetAnimation = animation.drive(tween);
+
+                      return SlideTransition(
+                        position: offsetAnimation,
+                        child: child,
+                      );
+                    },
+                    transitionDuration: const Duration(milliseconds: 500),
+                  ),
+                );
+              },
+              child: const Text('Lewati'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                // Show 6 records form as bottom sheet
+                showSixRecordsBottomSheet(context, name);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: secondaryColor,
+                foregroundColor: textColor,
+              ),
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -111,7 +169,7 @@ class _NameInputScreenState extends State<NameInputScreen> {
                 ),
                 const SizedBox(height: 10),
                 const Text(
-                  'Masukkan nama panggilanmu untuk memulai.',
+                  'Masukkan nama panggilanmu dan status haid untuk memulai.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 16,
@@ -120,6 +178,7 @@ class _NameInputScreenState extends State<NameInputScreen> {
                 ),
                 const SizedBox(height: 40),
                 TextField(
+                  key: const ValueKey('name-input'),
                   controller: _nameController,
                   maxLength: 10,
                   decoration: InputDecoration(
@@ -141,26 +200,42 @@ class _NameInputScreenState extends State<NameInputScreen> {
                   textCapitalization: TextCapitalization.words,
                 ),
                 const SizedBox(height: 20),
-                TextField(
-                  controller: _suciHabitsController,
-                  decoration: InputDecoration(
-                    labelText: 'Kebiasaan Suci (hari)',
-                    hintText: 'Masukkan rata-rata hari suci dalam siklus',
-                    fillColor: Colors.white,
-                    filled: true,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: primaryColor),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide:
-                          const BorderSide(color: secondaryColor, width: 2),
-                    ),
-                    prefixIcon:
-                        const Icon(Icons.calendar_today, color: primaryColor),
+                const Text(
+                  'Status Haid:',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: primaryColor,
                   ),
-                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: RadioListTile<String>(
+                        title: const Text('Baru Mengalami Haid'),
+                        value: 'Baru Mengalami',
+                        groupValue: _selectedStatus,
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedStatus = value;
+                          });
+                        },
+                      ),
+                    ),
+                    Expanded(
+                      child: RadioListTile<String>(
+                        title: const Text('Sudah Biasa Haid'),
+                        value: 'Sudah Biasa',
+                        groupValue: _selectedStatus,
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedStatus = value;
+                          });
+                        },
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 20),
                 ElevatedButton.icon(
@@ -207,7 +282,7 @@ class _SplashScreenState extends State<SplashScreen> {
     final prefs = await SharedPreferences.getInstance();
     final userName = prefs.getString(userNameKey);
 
-    await Future.delayed(const Duration(seconds: 5));
+    await Future.delayed(const Duration(milliseconds: 500));
 
     if (mounted) {
       if (userName != null && userName.isNotEmpty) {
