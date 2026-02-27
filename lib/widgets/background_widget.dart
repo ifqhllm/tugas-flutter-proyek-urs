@@ -15,7 +15,7 @@ class BackgroundWidget extends StatelessWidget {
           height: double.infinity,
           decoration: const BoxDecoration(
             image: DecorationImage(
-              image: AssetImage('assets/background.jfif'),
+              image: AssetImage('assets/background.jpg'),
               fit: BoxFit.cover, // Menyesuaikan gambar ke ukuran container
               alignment: Alignment.center,
             ),
