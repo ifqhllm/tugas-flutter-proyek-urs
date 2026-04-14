@@ -36,6 +36,9 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
   DateTime? _nextPredictedDate;
   List<HaidRecord> _allRecords = [];
 
+  List<HaidRecord> get _filteredRecords => 
+      _allRecords.where((r) => !r.notes.contains('onboarding')).toList();
+
   @override
   void initState() {
     super.initState();
@@ -671,11 +674,11 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
-                          if (haidStatus == 'Sudah Biasa' && predictionSkipped)
+                          if (haidStatus == 'Sudah Biasa' && predictionSkipped && _allRecords.length < 6)
                             Column(
                               children: [
                                 const Text(
-                                  'Prediksi belum tersedia. Silahkan catat 6 riwayat sebelumnya',
+                                  'Prediksi belum tersedia. Silakan mulai mencatat haid baru.',
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
                                     fontSize: 16,
@@ -697,6 +700,16 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                                   ),
                                 ),
                               ],
+                            ),
+                          if (haidStatus == 'Sudah Biasa' && predictionSkipped && _allRecords.length >= 6)
+                            const Text(
+                              'Prediksi belum tersedia. Silakan mulai mencatat haid baru.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.black87,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           if (haidStatus == 'Sudah Biasa' &&
                               predictionCompleted &&
@@ -794,13 +807,13 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                         ),
                       ),
                       const SizedBox(height: 15),
-                      if (_allRecords.isEmpty)
+                      if (_filteredRecords.isEmpty)
                         const Text(
                           'Belum ada riwayat siklus.',
                           style: TextStyle(color: textColor),
                         )
                       else
-                        ..._allRecords.reversed.take(5).map((record) {
+                        ..._filteredRecords.reversed.take(5).map((record) {
                           final start =
                               '${record.startDate.day}/${record.startDate.month}/${record.startDate.year}';
                           final end = record.endDate != null

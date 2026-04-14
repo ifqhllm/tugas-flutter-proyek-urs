@@ -143,22 +143,31 @@ class FikihService {
         allRecords.where((r) => r.endDate != null).toList();
     if (completedRecords.isEmpty) return null;
 
-    final latestEndDate = completedRecords.last.endDate!;
+    // Sort records by endDate to get chronological order
+    completedRecords.sort((a, b) => a.endDate!.compareTo(b.endDate!));
+
+    // Gunakan maksimal 6 siklus terakhir untuk prediksi
+    const int maxCyclesForPrediction = 6;
+    final recentRecords = completedRecords.length > maxCyclesForPrediction
+        ? completedRecords.sublist(completedRecords.length - maxCyclesForPrediction)
+        : completedRecords;
+
+    final latestEndDate = recentRecords.last.endDate!;
     final prefs = await SharedPreferences.getInstance();
     final suciHabits =
         prefs.getInt('suci_habits') ?? 14; // Default 14 hari suci
 
     // Jika hanya 1 record, gunakan rata-rata sederhana
-    if (completedRecords.length < 2) {
-      final averageHaidLength = _calculateAverageHaidLength(completedRecords);
+    if (recentRecords.length < 2) {
+      final averageHaidLength = _calculateAverageHaidLength(recentRecords);
       final predictedCycleLength = averageHaidLength + suciHabits;
       return latestEndDate.add(Duration(days: predictedCycleLength.round()));
     }
 
     // Hitung panjang siklus historis: Y = haid_days + suci_habits
     final cycleLengths = <double>[];
-    for (int i = 0; i < completedRecords.length; i++) {
-      final record = completedRecords[i];
+    for (int i = 0; i < recentRecords.length; i++) {
+      final record = recentRecords[i];
       final statusMap = _getFinalStatus(record);
       final haidDays = statusMap['predictionDays'] as int;
       final cycleLength = haidDays + suciHabits;
