@@ -23,7 +23,7 @@ class BackgroundWidget extends StatelessWidget {
         ),
 
         // 2. Efek Overlay (Opsional, untuk memudahkan membaca konten)
-        Container(
+        SizedBox(
           width: double.infinity,
           height: double.infinity,
         ),

@@ -389,7 +389,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 width: 300,
                 child: ShaderMask(
                   shaderCallback: (Rect bounds) {
-                    return LinearGradient(
+                    return const LinearGradient(
                       begin: Alignment.centerLeft,
                       end: Alignment.centerRight,
                       colors: [
@@ -596,7 +596,7 @@ class _MainScreenState extends State<MainScreen> {
                   width: 300,
                   child: ShaderMask(
                     shaderCallback: (Rect bounds) {
-                      return LinearGradient(
+                      return const LinearGradient(
                         begin: Alignment.centerLeft,
                         end: Alignment.centerRight,
                         colors: [

@@ -7,7 +7,7 @@ import '../models/haid_record.dart';
 import '../constants/colors.dart';
 import '../widgets/background_widget.dart';
 import 'wirid_and_dua_page.dart';
-import 'articles_page.dart' as articles;
+import 'materi_page.dart';
 import 'qa_page.dart';
 import 'six_records_form.dart';
 
@@ -35,9 +35,6 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
   String _hukumStatus = 'Memuat status...';
   DateTime? _nextPredictedDate;
   List<HaidRecord> _allRecords = [];
-
-  List<HaidRecord> get _filteredRecords => 
-      _allRecords.where((r) => !r.notes.contains('onboarding')).toList();
 
   @override
   void initState() {
@@ -391,7 +388,7 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                     Text(
                       'Assalamualaikum, ${widget.userName}',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 25,
                         fontWeight: FontWeight.w800,
                         color: secondaryColor,
@@ -473,7 +470,7 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                                     ? 'Karena kurang dari 24 jam maka haid anda adalah 1 hari. Silahkan Qadha\' Shalat dan Puasa Jika Ditinggalkan.'
                                     : _hukumStatus ==
                                             'ISTIHADAH LEBIH DARI 15 HARI'
-                                        ? 'Haid Anda Adalah 15 hari. Selebihnya Adalah Istihadah.'
+                                        ? 'Haid Anda Adalah 1 hari. Selebihnya Adalah Istihadah.'
                                         : 'Jika Anda Suci maka wajib qodho sholat. jika istihadah silahkan baca artikel mengenai hukumnya!',
                         textAlign: TextAlign.center,
                         style: TextStyle(
@@ -502,7 +499,7 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                       _buildNavButton(context, 'assets/images/Wirid & Doa.png',
                           'Wirid & Doa', const WiridAndDuaPage()),
                       _buildNavButton(context, 'assets/images/Article.png',
-                          'Artikel', const articles.DuaPage()),
+                          'Materi', const MateriPage()),
                       _buildNavButton(context, 'assets/images/Tanya Jawab.png',
                           'Tanya Jawab', const QAPage()),
                     ],
@@ -674,11 +671,11 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
-                          if (haidStatus == 'Sudah Biasa' && predictionSkipped && _allRecords.length < 6)
+                          if (haidStatus == 'Sudah Biasa' && predictionSkipped)
                             Column(
                               children: [
                                 const Text(
-                                  'Prediksi belum tersedia. Silakan mulai mencatat haid baru.',
+                                  'Prediksi belum tersedia. Silahkan catat 6 riwayat sebelumnya',
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
                                     fontSize: 16,
@@ -700,16 +697,6 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                                   ),
                                 ),
                               ],
-                            ),
-                          if (haidStatus == 'Sudah Biasa' && predictionSkipped && _allRecords.length >= 6)
-                            const Text(
-                              'Prediksi belum tersedia. Silakan mulai mencatat haid baru.',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.black87,
-                                fontWeight: FontWeight.w600,
-                              ),
                             ),
                           if (haidStatus == 'Sudah Biasa' &&
                               predictionCompleted &&
@@ -807,13 +794,13 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                         ),
                       ),
                       const SizedBox(height: 15),
-                      if (_filteredRecords.isEmpty)
+                      if (_allRecords.isEmpty)
                         const Text(
                           'Belum ada riwayat siklus.',
                           style: TextStyle(color: textColor),
                         )
                       else
-                        ..._filteredRecords.reversed.take(5).map((record) {
+                        ..._allRecords.reversed.take(5).map((record) {
                           final start =
                               '${record.startDate.day}/${record.startDate.month}/${record.startDate.year}';
                           final end = record.endDate != null
