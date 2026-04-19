@@ -36,7 +36,6 @@ class MateriPage extends StatefulWidget {
 class _MateriPageState extends State<MateriPage> {
   int _selectedIndex = 0;
   Set<int> _savedBookmarks = {};
-  bool _isLoading = true;
   String _searchQuery = '';
 
   final List<String> _haidList = [
@@ -84,7 +83,6 @@ class _MateriPageState extends State<MateriPage> {
         ...savedHaid.map((e) => int.parse(e)),
         ...savedIstihadah.map((e) => int.parse(e)),
       };
-      _isLoading = false;
     });
   }
 
@@ -274,8 +272,6 @@ class _MateriPageState extends State<MateriPage> {
 
   Widget _buildAppBar() {
     final hasAnyBookmark = _savedBookmarks.isNotEmpty;
-    final listLength =
-        _selectedIndex == 0 ? _haidList.length : _istihadahList.length;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
