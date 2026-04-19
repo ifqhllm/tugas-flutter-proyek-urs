@@ -21,6 +21,10 @@ import 'manajemen_haid_sehat_page.dart';
 import 'mengatasi_nyeri_haid_page.dart';
 import 'pengertia_istihadah_page.dart';
 import 'macam_istihadah_page.dart';
+import 'hukum_perempuan_istihadah_page.dart';
+import 'kewajiban_perempuan_istihadah_page.dart';
+import 'tatacara_sholat_dan_bersuci_page.dart';
+import 'mustahadah_page.dart';
 
 class MateriPage extends StatefulWidget {
   const MateriPage({super.key});
@@ -33,6 +37,7 @@ class _MateriPageState extends State<MateriPage> {
   int _selectedIndex = 0;
   Set<int> _savedBookmarks = {};
   bool _isLoading = true;
+  String _searchQuery = '';
 
   final List<String> _haidList = [
     'Pengertian haid',
@@ -43,7 +48,7 @@ class _MateriPageState extends State<MateriPage> {
     'Masa keluarnya darah haid',
     'Masa keluarnya darah nifas',
     'Ketentuan darah haid',
-    'Masa suc]i',
+    'Masa suci',
     'Larangan khusus bagi perempuan haid dan nifas',
     'Penghalang sholat',
     'Hal yang mubah saat haid dan nifas',
@@ -202,6 +207,36 @@ class _MateriPageState extends State<MateriPage> {
             context,
             MaterialPageRoute(
                 builder: (context) => const MengatasiNyeriHaidPage()));
+      }
+    } else if (_selectedIndex == 1) {
+      if (number == 1) {
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => const PengertiaIstihadahPage()));
+      } else if (number == 2) {
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => const MacamIstihadahPage()));
+      } else if (number == 3) {
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => const HukumPerempuanIstihadahPage()));
+      } else if (number == 4) {
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => const KewajibanPerempuanIstihadahPage()));
+      } else if (number == 5) {
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => const TatacaraSholatDanBersuciPage()));
+      } else if (number == 6) {
+        Navigator.push(context,
+            MaterialPageRoute(builder: (context) => const MustahadahPage()));
       }
     }
   }
@@ -406,6 +441,7 @@ class _MateriPageState extends State<MateriPage> {
       onTap: () {
         setState(() {
           _selectedIndex = index;
+          _searchQuery = '';
         });
       },
       child: Container(
@@ -443,6 +479,11 @@ class _MateriPageState extends State<MateriPage> {
           ],
         ),
         child: TextField(
+          onChanged: (value) {
+            setState(() {
+              _searchQuery = value.toLowerCase();
+            });
+          },
           decoration: InputDecoration(
             hintText: 'Cari Materi',
             hintStyle: TextStyle(
@@ -467,11 +508,17 @@ class _MateriPageState extends State<MateriPage> {
 
   Widget _buildListView() {
     final list = _selectedIndex == 0 ? _haidList : _istihadahList;
+    final filteredList = _searchQuery.isEmpty
+        ? list
+        : list
+            .where((item) => item.toLowerCase().contains(_searchQuery))
+            .toList();
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      itemCount: list.length,
+      itemCount: filteredList.length,
       itemBuilder: (context, index) {
-        return _buildCard(list[index], index + 1);
+        final originalIndex = list.indexOf(filteredList[index]);
+        return _buildCard(filteredList[index], originalIndex + 1);
       },
     );
   }
@@ -600,6 +647,30 @@ class _MateriPageState extends State<MateriPage> {
               context,
               MaterialPageRoute(
                   builder: (context) => const MacamIstihadahPage()),
+            );
+          } else if (number == 3) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => const HukumPerempuanIstihadahPage()),
+            );
+          } else if (number == 4) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) =>
+                      const KewajibanPerempuanIstihadahPage()),
+            );
+          } else if (number == 5) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => const TatacaraSholatDanBersuciPage()),
+            );
+          } else if (number == 6) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const MustahadahPage()),
             );
           }
         }
