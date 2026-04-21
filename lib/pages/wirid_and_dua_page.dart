@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../widgets/background_widget.dart';
 import '../constants/colors.dart';
 
 class WiridAndDuaPage extends StatefulWidget {
@@ -11,7 +10,7 @@ class WiridAndDuaPage extends StatefulWidget {
 
 class _WiridAndDuaPageState extends State<WiridAndDuaPage> {
   int _selectedIndex = 0; // 0 for Wirid, 1 for Doa
-  
+
   // Sample data for wirid list
   final List<Map<String, dynamic>> _wiridList = [
     {'number': 1, 'title': 'Wirid Pagi'},
@@ -43,37 +42,24 @@ class _WiridAndDuaPageState extends State<WiridAndDuaPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: _buildToggleSwitch(),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(
-              Icons.bookmark,
-              color: Colors.white,
-            ),
-            onPressed: () {
-              // TODO: Navigate to bookmarked items
-            },
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFFE6E6FA),
+              Colors.white,
+            ],
           ),
-        ],
-      ),
-      body: BackgroundWidget(
+        ),
         child: SafeArea(
           child: Column(
             children: [
-              const SizedBox(height: 8),
-              // Search Bar
+              _buildAppBar(),
+              const SizedBox(height: 16),
               _buildSearchBar(),
               const SizedBox(height: 16),
-              // List View
               Expanded(
                 child: _buildListView(),
               ),
@@ -84,11 +70,34 @@ class _WiridAndDuaPageState extends State<WiridAndDuaPage> {
     );
   }
 
+  Widget _buildAppBar() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.black),
+            onPressed: () => Navigator.pop(context),
+          ),
+          _buildToggleSwitch(),
+          IconButton(
+            icon: const Icon(
+              Icons.bookmark_border,
+              color: secondaryColor,
+            ),
+            onPressed: () {},
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildToggleSwitch() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.3),
-        borderRadius: BorderRadius.circular(20),
+        color: Colors.grey.shade200,
+        borderRadius: BorderRadius.circular(25),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -109,15 +118,15 @@ class _WiridAndDuaPageState extends State<WiridAndDuaPage> {
         });
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.white : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
+          color: isSelected ? secondaryColor : Colors.transparent,
+          borderRadius: BorderRadius.circular(25),
         ),
         child: Text(
           text,
           style: TextStyle(
-            color: isSelected ? Colors.black87 : Colors.white,
+            color: isSelected ? Colors.white : Colors.grey.shade600,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
             fontSize: 14,
           ),
@@ -131,13 +140,13 @@ class _WiridAndDuaPageState extends State<WiridAndDuaPage> {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.9),
+          color: Colors.grey.shade100,
           borderRadius: BorderRadius.circular(25),
-          boxShadow: [
+          boxShadow: const [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
+              color: Color(0x0D000000),
+              blurRadius: 8,
+              offset: Offset(0, 2),
             ),
           ],
         ),
@@ -145,12 +154,12 @@ class _WiridAndDuaPageState extends State<WiridAndDuaPage> {
           decoration: InputDecoration(
             hintText: _selectedIndex == 0 ? 'Cari Wirid' : 'Cari Doa',
             hintStyle: TextStyle(
-              color: Colors.grey[400],
+              color: Colors.grey.shade400,
               fontSize: 14,
             ),
             prefixIcon: Icon(
               Icons.search,
-              color: Colors.grey[400],
+              color: Colors.grey.shade400,
             ),
             border: InputBorder.none,
             contentPadding: const EdgeInsets.symmetric(
@@ -165,7 +174,7 @@ class _WiridAndDuaPageState extends State<WiridAndDuaPage> {
 
   Widget _buildListView() {
     final list = _selectedIndex == 0 ? _wiridList : _doaList;
-    
+
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       itemCount: list.length,

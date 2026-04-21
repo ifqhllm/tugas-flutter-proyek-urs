@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import '../constants/colors.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../models/haid_record.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 
 void showSixRecordsBottomSheet(BuildContext context, String name) {
   showModalBottomSheet(
@@ -36,77 +34,43 @@ class _SixRecordsBottomSheetContent extends StatefulWidget {
 
 class _SixRecordsBottomSheetContentState
     extends State<_SixRecordsBottomSheetContent> {
-  final List<TextEditingController> _durationControllers =
+  final List<TextEditingController> _cycleControllers =
       List.generate(6, (index) => TextEditingController());
-  final List<TextEditingController> _intervalControllers =
-      List.generate(5, (index) => TextEditingController());
-  DateTime? _lastPeriodDate;
 
   Future<void> _saveRecordsAndNavigate() async {
-    // Validate all inputs
-    bool isValid = true;
-    List<int> durations = [];
-    List<int> intervals = [];
+    List<int> cycleDurations = [];
 
     for (var i = 0; i < 6; i++) {
-      final duration = int.tryParse(_durationControllers[i].text.trim());
+      final duration = int.tryParse(_cycleControllers[i].text.trim());
       if (duration == null || duration <= 0) {
-        isValid = false;
-        break;
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content:
+                  Text('Siklus ke-${i + 1} harus diisi dengan angka positif.'),
+            ),
+          );
+        }
+        return;
       }
-      durations.add(duration);
+      cycleDurations.add(duration);
     }
 
-    for (var i = 0; i < 5; i++) {
-      final interval = int.tryParse(_intervalControllers[i].text.trim());
-      if (interval == null || interval <= 0) {
-        isValid = false;
-        break;
-      }
-      intervals.add(interval);
-    }
-
-    if (!isValid || _lastPeriodDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Semua data harus diisi dengan angka positif.')),
-      );
-      return;
-    }
-
-    // Convert to HaidRecord objects
-    List<HaidRecord> records = [];
-    DateTime currentDate = _lastPeriodDate!;
-
-    for (var i = 0; i < 6; i++) {
-      final startDate = currentDate;
-      final endDate = startDate.add(Duration(days: durations[i] - 1));
-
-      records.add(
-        HaidRecord(
-          startDate: startDate,
-          endDate: endDate,
-          durationDays: durations[i],
-          notes: 'Riwayat haid ke-${i + 1} (onboarding)',
-        ),
-      );
-
-      if (i < 5) {
-        currentDate = endDate.add(Duration(days: intervals[i]));
-      }
-    }
-
-    // Save to Hive
-    final box = await Hive.openBox<HaidRecord>('haidRecords');
-    for (var record in records) {
-      await box.add(record);
-    }
-
-    // Set prediction status as completed
     final prefs = await SharedPreferences.getInstance();
+
+    await prefs.setInt('cycle_1', cycleDurations[0]);
+    await prefs.setInt('cycle_2', cycleDurations[1]);
+    await prefs.setInt('cycle_3', cycleDurations[2]);
+    await prefs.setInt('cycle_4', cycleDurations[3]);
+    await prefs.setInt('cycle_5', cycleDurations[4]);
+    await prefs.setInt('cycle_6', cycleDurations[5]);
+
+    // Save the date when user input the 6 cycles
+    await prefs.setInt(
+        'cycles_input_date', DateTime.now().millisecondsSinceEpoch);
+
     await prefs.setBool('prediction_completed', true);
 
-    // Navigate to home page
     if (mounted) {
       Navigator.of(context).pushReplacementNamed('/');
     }
@@ -119,12 +83,11 @@ class _SixRecordsBottomSheetContentState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Header
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'Riwayat 6 Haid Sebelumnya',
+                'Durasi 6 Siklus Sebelumnya',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -138,351 +101,180 @@ class _SixRecordsBottomSheetContentState
             ],
           ),
           const SizedBox(height: 10),
-
-          // Divider
           const Divider(),
           const SizedBox(height: 10),
-
-          // Instructions
-          const Text(
-            'Masukkan durasi haid dan jarak suci secara berurutan:',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.black54,
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF8E1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFFFE082)),
             ),
-          ),
-          const SizedBox(height: 20),
-
-          // Scrollable content
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.only(bottom: 20),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Sequential inputs: Haid 1 → Suci 1-2 → Haid 2 → Suci 2-3 → etc.
-                // Haid 1
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 16.0),
-                  child: TextField(
-                    controller: _durationControllers[0],
-                    decoration: InputDecoration(
-                      labelText: '1. Durasi Haid ke-1 (hari)',
-                      fillColor: Colors.white,
-                      filled: true,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: primaryColor),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide:
-                            const BorderSide(color: secondaryColor, width: 2),
-                      ),
-                      prefixIcon:
-                          const Icon(Icons.calendar_today, color: primaryColor),
-                    ),
-                    keyboardType: TextInputType.number,
-                  ),
-                ),
-
-                // Suci 1-2
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 16.0),
-                  child: TextField(
-                    controller: _intervalControllers[0],
-                    decoration: InputDecoration(
-                      labelText:
-                          '2. Jarak Suci antar Haid ke-1 dan ke-2 (hari)',
-                      fillColor: Colors.white,
-                      filled: true,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: primaryColor),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide:
-                            const BorderSide(color: secondaryColor, width: 2),
-                      ),
-                      prefixIcon:
-                          const Icon(Icons.calendar_today, color: primaryColor),
-                    ),
-                    keyboardType: TextInputType.number,
-                  ),
-                ),
-
-                // Haid 2
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 16.0),
-                  child: TextField(
-                    controller: _durationControllers[1],
-                    decoration: InputDecoration(
-                      labelText: '3. Durasi Haid ke-2 (hari)',
-                      fillColor: Colors.white,
-                      filled: true,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: primaryColor),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide:
-                            const BorderSide(color: secondaryColor, width: 2),
-                      ),
-                      prefixIcon:
-                          const Icon(Icons.calendar_today, color: primaryColor),
-                    ),
-                    keyboardType: TextInputType.number,
-                  ),
-                ),
-
-                // Suci 2-3
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 16.0),
-                  child: TextField(
-                    controller: _intervalControllers[1],
-                    decoration: InputDecoration(
-                      labelText:
-                          '4. Jarak Suci antar Haid ke-2 dan ke-3 (hari)',
-                      fillColor: Colors.white,
-                      filled: true,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: primaryColor),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide:
-                            const BorderSide(color: secondaryColor, width: 2),
-                      ),
-                      prefixIcon:
-                          const Icon(Icons.calendar_today, color: primaryColor),
-                    ),
-                    keyboardType: TextInputType.number,
-                  ),
-                ),
-
-                // Haid 3
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 16.0),
-                  child: TextField(
-                    controller: _durationControllers[2],
-                    decoration: InputDecoration(
-                      labelText: '5. Durasi Haid ke-3 (hari)',
-                      fillColor: Colors.white,
-                      filled: true,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: primaryColor),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide:
-                            const BorderSide(color: secondaryColor, width: 2),
-                      ),
-                      prefixIcon:
-                          const Icon(Icons.calendar_today, color: primaryColor),
-                    ),
-                    keyboardType: TextInputType.number,
-                  ),
-                ),
-
-                // Suci 3-4
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 16.0),
-                  child: TextField(
-                    controller: _intervalControllers[2],
-                    decoration: InputDecoration(
-                      labelText:
-                          '6. Jarak Suci antar Haid ke-3 dan ke-4 (hari)',
-                      fillColor: Colors.white,
-                      filled: true,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: primaryColor),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide:
-                            const BorderSide(color: secondaryColor, width: 2),
-                      ),
-                      prefixIcon:
-                          const Icon(Icons.calendar_today, color: primaryColor),
-                    ),
-                    keyboardType: TextInputType.number,
-                  ),
-                ),
-
-                // Haid 4
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 16.0),
-                  child: TextField(
-                    controller: _durationControllers[3],
-                    decoration: InputDecoration(
-                      labelText: '7. Durasi Haid ke-4 (hari)',
-                      fillColor: Colors.white,
-                      filled: true,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: primaryColor),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide:
-                            const BorderSide(color: secondaryColor, width: 2),
-                      ),
-                      prefixIcon:
-                          const Icon(Icons.calendar_today, color: primaryColor),
-                    ),
-                    keyboardType: TextInputType.number,
-                  ),
-                ),
-
-                // Suci 4-5
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 16.0),
-                  child: TextField(
-                    controller: _intervalControllers[3],
-                    decoration: InputDecoration(
-                      labelText:
-                          '8. Jarak Suci antar Haid ke-4 dan ke-5 (hari)',
-                      fillColor: Colors.white,
-                      filled: true,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: primaryColor),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide:
-                            const BorderSide(color: secondaryColor, width: 2),
-                      ),
-                      prefixIcon:
-                          const Icon(Icons.calendar_today, color: primaryColor),
-                    ),
-                    keyboardType: TextInputType.number,
-                  ),
-                ),
-
-                // Haid 5
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 16.0),
-                  child: TextField(
-                    controller: _durationControllers[4],
-                    decoration: InputDecoration(
-                      labelText: '9. Durasi Haid ke-5 (hari)',
-                      fillColor: Colors.white,
-                      filled: true,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: primaryColor),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide:
-                            const BorderSide(color: secondaryColor, width: 2),
-                      ),
-                      prefixIcon:
-                          const Icon(Icons.calendar_today, color: primaryColor),
-                    ),
-                    keyboardType: TextInputType.number,
-                  ),
-                ),
-
-                // Suci 5-6
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 16.0),
-                  child: TextField(
-                    controller: _intervalControllers[4],
-                    decoration: InputDecoration(
-                      labelText:
-                          '10. Jarak Suci antar Haid ke-5 dan ke-6 (hari)',
-                      fillColor: Colors.white,
-                      filled: true,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: primaryColor),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide:
-                            const BorderSide(color: secondaryColor, width: 2),
-                      ),
-                      prefixIcon:
-                          const Icon(Icons.calendar_today, color: primaryColor),
-                    ),
-                    keyboardType: TextInputType.number,
-                  ),
-                ),
-
-                // Haid 6
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 16.0),
-                  child: TextField(
-                    controller: _durationControllers[5],
-                    decoration: InputDecoration(
-                      labelText: '11. Durasi Haid ke-6 (hari)',
-                      fillColor: Colors.white,
-                      filled: true,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: primaryColor),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide:
-                            const BorderSide(color: secondaryColor, width: 2),
-                      ),
-                      prefixIcon:
-                          const Icon(Icons.calendar_today, color: primaryColor),
-                    ),
-                    keyboardType: TextInputType.number,
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                // Last period date picker
-                ElevatedButton.icon(
-                  onPressed: () async {
-                    final pickedDate = await showDatePicker(
-                      context: context,
-                      initialDate:
-                          DateTime.now().subtract(const Duration(days: 30)),
-                      firstDate:
-                          DateTime.now().subtract(const Duration(days: 365)),
-                      lastDate: DateTime.now(),
-                      helpText: 'Tanggal Terakhir Haid ke-6',
-                    );
-                    if (pickedDate != null) {
-                      setState(() {
-                        _lastPeriodDate = pickedDate;
-                      });
-                    }
-                  },
-                  icon: const Icon(Icons.date_range),
-                  label: Text(
-                    _lastPeriodDate == null
-                        ? 'Pilih Tanggal Terakhir Haid ke-6'
-                        : 'Tanggal: ${_lastPeriodDate!.toLocal().toString().split(' ')[0]}',
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: primaryColor,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      side: const BorderSide(color: primaryColor),
+                const Icon(Icons.info_outline,
+                    color: Color(0xFFF9A825), size: 20),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    'Catatan: 1 siklus terdiri dari masa haid DAN masa suci (bukan hanya masa haid saja).',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFFF57F17),
                     ),
                   ),
                 ),
               ],
             ),
           ),
-
           const SizedBox(height: 20),
-
-          // Save button
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.only(bottom: 20),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16.0),
+                  child: TextField(
+                    controller: _cycleControllers[0],
+                    decoration: InputDecoration(
+                      labelText: 'Durasi Siklus ke-1 (hari)',
+                      fillColor: Colors.white,
+                      filled: true,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: primaryColor),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide:
+                            const BorderSide(color: secondaryColor, width: 2),
+                      ),
+                      prefixIcon:
+                          const Icon(Icons.calendar_today, color: primaryColor),
+                    ),
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16.0),
+                  child: TextField(
+                    controller: _cycleControllers[1],
+                    decoration: InputDecoration(
+                      labelText: 'Durasi Siklus ke-2 (hari)',
+                      fillColor: Colors.white,
+                      filled: true,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: primaryColor),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide:
+                            const BorderSide(color: secondaryColor, width: 2),
+                      ),
+                      prefixIcon:
+                          const Icon(Icons.calendar_today, color: primaryColor),
+                    ),
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16.0),
+                  child: TextField(
+                    controller: _cycleControllers[2],
+                    decoration: InputDecoration(
+                      labelText: 'Durasi Siklus ke-3 (hari)',
+                      fillColor: Colors.white,
+                      filled: true,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: primaryColor),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide:
+                            const BorderSide(color: secondaryColor, width: 2),
+                      ),
+                      prefixIcon:
+                          const Icon(Icons.calendar_today, color: primaryColor),
+                    ),
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16.0),
+                  child: TextField(
+                    controller: _cycleControllers[3],
+                    decoration: InputDecoration(
+                      labelText: 'Durasi Siklus ke-4 (hari)',
+                      fillColor: Colors.white,
+                      filled: true,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: primaryColor),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide:
+                            const BorderSide(color: secondaryColor, width: 2),
+                      ),
+                      prefixIcon:
+                          const Icon(Icons.calendar_today, color: primaryColor),
+                    ),
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16.0),
+                  child: TextField(
+                    controller: _cycleControllers[4],
+                    decoration: InputDecoration(
+                      labelText: 'Durasi Siklus ke-5 (hari)',
+                      fillColor: Colors.white,
+                      filled: true,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: primaryColor),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide:
+                            const BorderSide(color: secondaryColor, width: 2),
+                      ),
+                      prefixIcon:
+                          const Icon(Icons.calendar_today, color: primaryColor),
+                    ),
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16.0),
+                  child: TextField(
+                    controller: _cycleControllers[5],
+                    decoration: InputDecoration(
+                      labelText: 'Durasi Siklus ke-6 (hari)',
+                      fillColor: Colors.white,
+                      filled: true,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: primaryColor),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide:
+                            const BorderSide(color: secondaryColor, width: 2),
+                      ),
+                      prefixIcon:
+                          const Icon(Icons.calendar_today, color: primaryColor),
+                    ),
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
           ElevatedButton.icon(
             onPressed: _saveRecordsAndNavigate,
             icon: const Icon(Icons.save, size: 20),

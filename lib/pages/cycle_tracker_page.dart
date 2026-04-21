@@ -460,31 +460,6 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 10),
-                      Text(
-                        _hukumStatus == 'HAID SEMENTARA'
-                            ? 'Silakan catat peristiwa darah harian/jam-an. Status final akan dihitung setelah Darah Berhenti.'
-                            : _hukumStatus.contains('HAID SELAMA')
-                                ? 'Jika Sudah Berhenti Silahkan Melakukan Mandi Wajib.'
-                                : _hukumStatus == 'ISTIHADAH KURANG DARI 24 JAM'
-                                    ? 'Karena kurang dari 24 jam maka haid anda adalah 1 hari. Silahkan Qadha\' Shalat dan Puasa Jika Ditinggalkan.'
-                                    : _hukumStatus ==
-                                            'ISTIHADAH LEBIH DARI 15 HARI'
-                                        ? 'Haid Anda Adalah 1 hari. Selebihnya Adalah Istihadah.'
-                                        : 'Jika Anda Suci maka wajib qodho sholat. jika istihadah silahkan baca artikel mengenai hukumnya!',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.black87,
-                          shadows: [
-                            Shadow(
-                              color: Colors.black.withOpacity(0.1),
-                              offset: const Offset(1, 1),
-                              blurRadius: 1,
-                            ),
-                          ],
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -700,14 +675,22 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                             ),
                           if (haidStatus == 'Sudah Biasa' &&
                               predictionCompleted &&
+                              _nextPredictedDate != null &&
                               !hasActiveRecord)
-                            const Text(
-                              'Prediksi akan tersedia jika anda sudah mulai mencatat haid baru.',
+                            Text(
+                              'Prediksi Haid: ${_nextPredictedDate!.day}/${_nextPredictedDate!.month}/${_nextPredictedDate!.year}',
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.black87,
-                                fontWeight: FontWeight.w600,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: secondaryColor,
+                                shadows: [
+                                  Shadow(
+                                    color: Colors.black.withOpacity(0.2),
+                                    offset: const Offset(1, 1),
+                                    blurRadius: 2,
+                                  ),
+                                ],
                               ),
                             ),
                           if (haidStatus == 'Sudah Biasa' &&
@@ -990,23 +973,6 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                                         color: Colors.grey.shade600,
                                       ),
                                     ),
-                                    // Status message for completed cycles
-                                    if (record.endDate != null &&
-                                        hukumStatus != null) ...[
-                                      const SizedBox(height: 6),
-                                      Text(
-                                        hukumStatus.contains('ISTIHADAH')
-                                            ? hukumStatus.contains('15')
-                                                ? 'Status: Istihaadah (Melebihi 15 hari - Darah tidak dianggap haid)'
-                                                : 'Status: Istihaadah (Kurang dari 24 jam - Darah tidak dianggap haid)'
-                                            : 'Status: Haid (Sesuai syariat Islam - Ada pengecualian ibadah)',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color: progressColor,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ],
                                   ],
                                 ),
                                 const SizedBox(height: 12),

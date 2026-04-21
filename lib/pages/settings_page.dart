@@ -50,6 +50,19 @@ class _SettingsPageState extends State<SettingsPage> {
     if (confirm == true) {
       try {
         await main.haidService.clearAllRecords();
+
+        // Also clear the 6 user-input cycles
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('cycle_1');
+        await prefs.remove('cycle_2');
+        await prefs.remove('cycle_3');
+        await prefs.remove('cycle_4');
+        await prefs.remove('cycle_5');
+        await prefs.remove('cycle_6');
+        await prefs.remove('cycles_input_date');
+        await prefs.remove('prediction_completed');
+        await prefs.remove('prediction_skipped');
+
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
