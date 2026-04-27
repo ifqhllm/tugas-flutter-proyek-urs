@@ -70,15 +70,9 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
           _currentRecord = current;
           _allRecords = allRecords;
 
-          // Logika untuk status Home Page
-          if (current != null && current.endDate == null) {
-            // Jika ada record aktif TAPI belum selesai (endDate == null)
-            _hukumStatus = 'HAID SEMENTARA';
-          } else {
-            // Jika tidak ada record aktif atau sudah selesai, hitung status final hari ini
-            _hukumStatus =
-                fikihService.getHukumStatus(DateTime.now(), allRecords);
-          }
+          // Logika untuk status Home Page - use detailed status for accurate display
+          _hukumStatus =
+              fikihService.getHukumStatus(DateTime.now(), allRecords);
 
           _nextPredictedDate = nextPredictedDate;
         });
@@ -460,6 +454,39 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                           ],
                         ),
                       ),
+                      const SizedBox(height: 12),
+                      // Show message if exists for today's status
+                      if (!_isLoading)
+                        Builder(
+                          builder: (context) {
+                            final statusDetail =
+                                fikihService.getDetailedHukumStatus(
+                                    DateTime.now(), _allRecords);
+                            final message = statusDetail['message'] as String?;
+                            if (message != null && message.isNotEmpty) {
+                              return Container(
+                                padding: const EdgeInsets.all(12),
+                                margin: const EdgeInsets.only(top: 8),
+                                decoration: BoxDecoration(
+                                  color: Colors.amber.shade100,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                      color: Colors.amber.shade300, width: 1),
+                                ),
+                                child: Text(
+                                  message,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.black87,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                              );
+                            }
+                            return const SizedBox.shrink();
+                          },
+                        ),
                     ],
                   ),
                 ),
@@ -646,11 +673,12 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
-                          if (haidStatus == 'Sudah Biasa' && predictionSkipped)
+                          if (haidStatus == 'Sudah Biasa' &&
+                              !predictionCompleted)
                             Column(
                               children: [
                                 const Text(
-                                  'Prediksi belum tersedia. Silahkan catat 6 riwayat sebelumnya',
+                                  'Silahkan catat 6 riwayat sebelumnya',
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
                                     fontSize: 16,
@@ -800,14 +828,11 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                           List<Color> gradientColors;
                           double actualProgressPercentage = progressPercentage;
 
-                          String? hukumStatus;
-
                           if (record.endDate != null) {
                             // Completed cycle - get detailed status
                             final statusDetail =
                                 fikihService.getDetailedHukumStatus(
                                     record.endDate!, _allRecords);
-                            hukumStatus = statusDetail['status'] as String;
                             final statusType = statusDetail['type'] as String;
                             final totalDays = record.endDate!
                                     .difference(record.startDate)
@@ -818,29 +843,32 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                               // Scenario 1: All days are haid - solid green
                               progressColor = Colors.green;
                               gradientColors = [Colors.green, Colors.green];
-                            } else if (statusType == 'ISTIHADAH_SHORT') {
-                              // Scenario 2: 1 day haid (red) + rest istihadah (green)
+                            } else if (statusType == 'ISTIHADAH_SHORT' ||
+                                statusType == 'ISTIHADAH_LONG') {
+                              // Scenarios 2 & 3: All days are istihadah (no haid days)
                               progressColor = Colors.green;
-                              gradientColors = [Colors.red, Colors.green];
-                              // Progress shows: 1 day red portion, rest green
-                              actualProgressPercentage =
-                                  totalDays > 1 ? (1 / totalDays) : 1.0;
-                            } else if (statusType == 'ISTIHADAH_LONG') {
-                              // Scenario 3: 15 days haid (red) + rest istihadah (green)
-                              progressColor = Colors.green;
-                              gradientColors = [Colors.red, Colors.green];
-                              // Progress shows: 15 days red portion, rest green
-                              actualProgressPercentage =
-                                  totalDays > 15 ? (15 / totalDays) : 1.0;
+                              gradientColors = [Colors.green, Colors.green];
                             } else {
                               // Fallback - all red (istihadah)
                               progressColor = Colors.red;
                               gradientColors = [Colors.red, Colors.red];
                             }
                           } else {
-                            // Ongoing cycle - yellow to red gradient
-                            progressColor = Colors.orange;
-                            gradientColors = [Colors.yellow, Colors.red];
+                            // Ongoing cycle - get status based on current duration
+                            final today = DateTime.now();
+                            final statusDetail = fikihService
+                                .getDetailedHukumStatus(today, _allRecords);
+                            final statusType = statusDetail['type'] as String;
+
+                            if (statusType == 'HAID_ACTIVE') {
+                              // Active haid within 15 days and 24+ hours - orange to red gradient
+                              progressColor = Colors.orange;
+                              gradientColors = [Colors.yellow, Colors.red];
+                            } else {
+                              // ISTIHADAH (either <24 hours or >15 days) - green
+                              progressColor = Colors.green;
+                              gradientColors = [Colors.green, Colors.green];
+                            }
                           }
 
                           return Container(

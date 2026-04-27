@@ -5,7 +5,9 @@ class FikihService {
   Map<String, dynamic> _getFinalStatus(HaidRecord record) {
     // Hitung durasi dalam hari dari start sampai waktu saat ini (atau endDate jika sudah diakhiri)
     final endTime = record.endDate ?? DateTime.now();
-    final totalDurationDays = endTime.difference(record.startDate).inDays + 1;
+    final endDay = DateTime(endTime.year, endTime.month, endTime.day);
+    final startDay = DateTime(record.startDate.year, record.startDate.month, record.startDate.day);
+    final totalDurationDays = endDay.difference(startDay).inDays + 1;
 
     // Hitung jumlah event yang dicatat (setiap event = 1 jam)
     final loggedHours = record.bloodEvents.length;
@@ -21,14 +23,14 @@ class FikihService {
     final exceeds15Days = totalDurationDays > maxHaidDays;
 
     // Scenario 1: Recorded within 15 days AND 24+ hours recorded AND user ended haid
-    // Status: "HAID SELAMA ... days" based on logged recording days
+    // Status: "HAID SELAMA ... days" based on total calendar duration
     if (isWithin15Days && is24HoursOrMore && record.endDate != null) {
       return {
-        'status': 'HAID SELAMA $loggedDays HARI',
+        'status': 'HAID SELAMA $totalDurationDays HARI',
         'type': 'HAID',
-        'haidDays': loggedDays,
+        'haidDays': totalDurationDays,
         'istihadahDays': 0,
-        'predictionDays': loggedDays,
+        'predictionDays': totalDurationDays,
       };
     }
 
@@ -48,9 +50,9 @@ class FikihService {
       };
     }
 
-    // Scenario 3: 24+ hours recorded but exceeds 15 days (even if user hasn't ended haid yet)
+    // Scenario 3: Duration exceeds 15 days (even if user hasn't ended haid yet)
     // Status: "ISTIHADAH LEBIH DARI 15 HARI"
-    if (exceeds15Days || (is24HoursOrMore && !isWithin15Days)) {
+    if (exceeds15Days) {
       return {
         'status': 'ISTIHADAH LEBIH DARI 15 HARI',
         'type': 'ISTIHADAH_LONG',
@@ -63,7 +65,7 @@ class FikihService {
     }
 
     // Active haid (within 15 days, 24+ hours, not ended yet) - showing current status
-    if (is24HoursOrMore && !record.endDate!.isAfter(DateTime.now())) {
+    if (is24HoursOrMore && record.endDate == null) {
       return {
         'status': 'HAID SEMENTARA',
         'type': 'HAID_ACTIVE',
@@ -80,11 +82,11 @@ class FikihService {
       'haidDays': 0,
       'istihadahDays': totalDurationDays,
       'predictionDays': 0,
-      'message': 'Catat terus minimal 24 jam untuk status haid yang valid',
+      'message': 'Catat terus untuk status haid yang valid',
     };
   }
 
-// --- 2. Mendapatkan Status Hukum untuk tanggal tertentu ---
+  // --- 2. Mendapatkan Status Hukum untuk tanggal tertentu ---
   String getHukumStatus(DateTime date, List<HaidRecord> allRecords) {
     if (allRecords.isEmpty) {
       return 'SUCI (Belum ada riwayat)';
@@ -98,7 +100,8 @@ class FikihService {
 
       if (record.endDate == null) {
         if (checkDate.isAtSameMomentAs(start) || checkDate.isAfter(start)) {
-          return 'HAID SEMENTARA';
+          final statusDetail = getDetailedHukumStatus(checkDate, allRecords);
+          return statusDetail['status'] as String;
         }
       } else {
         final end = DateTime(
@@ -130,7 +133,52 @@ class FikihService {
 
       if (record.endDate == null) {
         if (checkDate.isAtSameMomentAs(start) || checkDate.isAfter(start)) {
-          return {'status': 'HAID SEMENTARA', 'type': 'HAID_SEMENTARA'};
+          // For active records, use _getFinalStatus logic adapted for ongoing
+          final totalDurationDays =
+              checkDate.difference(start).inDays + 1;
+          final loggedHours = record.bloodEvents.length;
+
+          const int minHaidHours = 24;
+          const int maxHaidDays = 15;
+
+          final is24HoursOrMore = loggedHours >= minHaidHours;
+          final exceeds15Days = totalDurationDays > maxHaidDays;
+
+          // Active cycle exceeding 15 days
+          if (exceeds15Days) {
+            return {
+              'status': 'ISTIHADAH LEBIH DARI 15 HARI',
+              'type': 'ISTIHADAH_LONG',
+              'haidDays': 0,
+              'istihadahDays': totalDurationDays,
+              'predictionDays': 0,
+              'message':
+                  'Karena lebih dari 15 hari maka haid anda tergantung status mustahadahnya. Silahkan baca materi tentang mustahadah',
+            };
+          }
+
+          // Active haid (within 15 days and 24+ hours)
+          if (is24HoursOrMore) {
+            final loggedDays = (loggedHours / 24).ceil();
+            return {
+              'status': 'HAID SEMENTARA',
+              'type': 'HAID_ACTIVE',
+              'haidDays': loggedDays,
+              'istihadahDays': 0,
+              'predictionDays': loggedDays,
+            };
+          }
+
+          // Active within 15 days but less than 24 hours
+          return {
+            'status': 'HAID SEMENTARA',
+            'type': 'HAID_ACTIVE',
+            'haidDays': 0,
+            'istihadahDays': totalDurationDays,
+            'predictionDays': 0,
+            'message':
+                'Catat terus minimal 24 jam untuk status haid yang valid',
+          };
         }
       } else {
         final end = DateTime(
@@ -181,7 +229,9 @@ class FikihService {
       for (int i = 1; i < completedRecords.length; i++) {
         final prevStart = completedRecords[i - 1].startDate;
         final currStart = completedRecords[i].startDate;
-        final cycleLength = currStart.difference(prevStart).inDays;
+        final prevStartDay = DateTime(prevStart.year, prevStart.month, prevStart.day);
+        final currStartDay = DateTime(currStart.year, currStart.month, currStart.day);
+        final cycleLength = currStartDay.difference(prevStartDay).inDays;
         if (cycleLength > 0) {
           allCycleLengths.add(cycleLength.toDouble());
         }

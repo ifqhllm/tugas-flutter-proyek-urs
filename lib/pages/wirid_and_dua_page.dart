@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../constants/colors.dart';
+import 'dzikir_pagi_page.dart';
 
 class WiridAndDuaPage extends StatefulWidget {
   const WiridAndDuaPage({super.key});
@@ -13,7 +14,7 @@ class _WiridAndDuaPageState extends State<WiridAndDuaPage> {
 
   // Sample data for wirid list
   final List<Map<String, dynamic>> _wiridList = [
-    {'number': 1, 'title': 'Wirid Pagi'},
+    {'number': 1, 'title': 'Dzikir Pagi'},
     {'number': 2, 'title': 'Wirid Sore'},
     {'number': 3, 'title': 'Wirid Sebelum Tidur'},
     {'number': 4, 'title': 'Wirid Setelah Shalat'},
@@ -185,63 +186,73 @@ class _WiridAndDuaPageState extends State<WiridAndDuaPage> {
   }
 
   Widget _buildCard(Map<String, dynamic> item) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(10),
-        child: Row(
-          children: [
-            // Left side - Pink container with number
-            Container(
-              width: 50,
-              height: 70,
-              color: secondaryColor,
-              child: Center(
-                child: Text(
-                  '${item['number']}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-            // Center - Title
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  item['title'],
-                  style: const TextStyle(
-                    color: Colors.black87,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ),
-            // Right side - Bookmark icon (top right)
-            Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: Icon(
-                Icons.bookmark_border,
-                color: secondaryColor.withOpacity(0.7),
-                size: 20,
-              ),
+    return GestureDetector(
+      onTap: () {
+        if (item['title'] == 'Dzikir Pagi') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const DzikirPagiPage()),
+          );
+        }
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
           ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: Row(
+            children: [
+              // Left side - Pink container with number
+              Container(
+                width: 50,
+                height: 70,
+                color: secondaryColor,
+                child: Center(
+                  child: Text(
+                    '${item['number']}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+              // Center - Title
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    item['title'],
+                    style: const TextStyle(
+                      color: Colors.black87,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ),
+              // Right side - Bookmark icon (top right)
+              Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: Icon(
+                  Icons.bookmark_border,
+                  color: secondaryColor.withOpacity(0.7),
+                  size: 20,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

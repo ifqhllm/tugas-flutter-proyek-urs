@@ -38,7 +38,9 @@ class HaidRecord extends HiveObject {
   // Metode untuk menghitung durasi saat haid selesai
   void calculateDuration() {
     if (endDate != null) {
-      durationDays = endDate!.difference(startDate).inDays + 1;
+      final endDay = DateTime(endDate!.year, endDate!.month, endDate!.day);
+      final startDay = DateTime(startDate.year, startDate.month, startDate.day);
+      durationDays = endDay.difference(startDay).inDays + 1;
     } else {
       durationDays = 0;
     }
