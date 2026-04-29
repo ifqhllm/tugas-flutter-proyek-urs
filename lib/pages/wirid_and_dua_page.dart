@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import '../constants/colors.dart';
 import 'dzikir_pagi_page.dart';
+import 'dzikir_petang_page.dart';
+import 'wirid_setelah_shalat_page.dart';
+import 'wirid_sebelum_tidur_page.dart';
+import 'wirid_istighfar_page.dart';
 
 class WiridAndDuaPage extends StatefulWidget {
   const WiridAndDuaPage({super.key});
@@ -15,7 +19,7 @@ class _WiridAndDuaPageState extends State<WiridAndDuaPage> {
   // Sample data for wirid list
   final List<Map<String, dynamic>> _wiridList = [
     {'number': 1, 'title': 'Dzikir Pagi'},
-    {'number': 2, 'title': 'Wirid Sore'},
+    {'number': 2, 'title': 'Dzikir Petang'},
     {'number': 3, 'title': 'Wirid Sebelum Tidur'},
     {'number': 4, 'title': 'Wirid Setelah Shalat'},
     {'number': 5, 'title': 'Wirid Tasbih'},
@@ -192,6 +196,26 @@ class _WiridAndDuaPageState extends State<WiridAndDuaPage> {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const DzikirPagiPage()),
+          );
+        } else if (item['title'] == 'Dzikir Petang') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const DzikirPetangPage()),
+          );
+        } else if (item['title'] == 'Wirid Setelah Shalat') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const WiridSetelahShalatPage()),
+          );
+        } else if (item['title'] == 'Wirid Sebelum Tidur') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const WiridSebelumTidurPage()),
+          );
+        } else if (item['title'] == 'Wirid Istighfar') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const WiridIstighfarPage()),
           );
         }
       },
