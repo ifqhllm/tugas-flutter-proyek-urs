@@ -8,7 +8,7 @@ import '../constants/colors.dart';
 import '../widgets/background_widget.dart';
 import 'wirid_and_dua_page.dart';
 import 'materi_page.dart';
-import 'qa_page.dart';
+import 'faq_page.dart';
 import 'six_records_form.dart';
 
 final FikihService fikihService = FikihService();
@@ -503,7 +503,7 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                       _buildNavButton(context, 'assets/images/Article.png',
                           'Materi', const MateriPage()),
                       _buildNavButton(context, 'assets/images/Tanya Jawab.png',
-                          'Tanya Jawab', const QAPage()),
+                          'Tanya Jawab', const FaqPage()),
                     ],
                   ),
                 ),
