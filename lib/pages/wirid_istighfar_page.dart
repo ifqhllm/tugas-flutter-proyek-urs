@@ -5,7 +5,7 @@ import '../constants/colors.dart';
 class WiridIstighfarPage extends StatefulWidget {
   final int materialNumber;
 
-  const WiridIstighfarPage({super.key, this.materialNumber = 6});
+  const WiridIstighfarPage({super.key, this.materialNumber = 5});
 
   @override
   State<WiridIstighfarPage> createState() => _WiridIstighfarPageState();
