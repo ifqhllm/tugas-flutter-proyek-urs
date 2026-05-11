@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import '../constants/colors.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-void showSixRecordsBottomSheet(BuildContext context, String name) {
+import 'kebiasaan_haid_dialog.dart';
+
+void showSixRecordsBottomSheet(BuildContext context, String name, {bool isFromMainScreen = true}) {
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
@@ -16,7 +18,7 @@ void showSixRecordsBottomSheet(BuildContext context, String name) {
         minChildSize: 0.5,
         expand: false,
         builder: (_, ScrollController scrollController) {
-          return _SixRecordsBottomSheetContent(name: name);
+          return _SixRecordsBottomSheetContent(name: name, isFromMainScreen: isFromMainScreen, parentContext: context);
         },
       );
     },
@@ -25,7 +27,9 @@ void showSixRecordsBottomSheet(BuildContext context, String name) {
 
 class _SixRecordsBottomSheetContent extends StatefulWidget {
   final String name;
-  const _SixRecordsBottomSheetContent({required this.name});
+  final bool isFromMainScreen;
+  final BuildContext parentContext;
+  const _SixRecordsBottomSheetContent({required this.name, this.isFromMainScreen = true, required this.parentContext});
 
   @override
   State<_SixRecordsBottomSheetContent> createState() =>
@@ -72,7 +76,9 @@ class _SixRecordsBottomSheetContentState
     await prefs.setBool('prediction_completed', true);
 
     if (mounted) {
-      Navigator.of(context).pushReplacementNamed('/');
+      // Pindah ke dialog kebiasaan haid bukan langsung ke main
+      Navigator.of(context).pop(); // Tutup bottom sheet
+      showKebiasaanHaidDialog(widget.parentContext, isFromMainScreen: widget.isFromMainScreen);
     }
   }
 

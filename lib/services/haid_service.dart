@@ -31,6 +31,21 @@ class HaidService {
     return null;
   }
 
+  Future<HaidRecord?> getLastEndedRecord() async {
+    final box = await _openBox();
+
+    final endedRecords = box.values
+        .cast<HaidRecord>()
+        .where((record) => record.endDate != null)
+        .toList();
+
+    if (endedRecords.isNotEmpty) {
+      endedRecords.sort((a, b) => b.endDate!.compareTo(a.endDate!));
+      return endedRecords.first;
+    }
+    return null;
+  }
+
   Future<void> startHaid(DateTime startDate) async {
     final active = await getCurrentActiveRecord();
     if (active != null) {
@@ -41,6 +56,11 @@ class HaidService {
 
     final box = await _openBox();
     await box.add(newRecord);
+  }
+
+  Future<void> resumeHaid(HaidRecord record) async {
+    record.endDate = null;
+    await record.save();
   }
 
   Future<void> logBloodEvent(DateTime timestamp, String type) async {

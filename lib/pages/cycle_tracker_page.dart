@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/fikih_service.dart';
 import '../services/haid_service.dart';
@@ -35,6 +36,8 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
   String _hukumStatus = 'Memuat status...';
   DateTime? _nextPredictedDate;
   List<HaidRecord> _allRecords = [];
+  String _haidStatus = 'Sudah Biasa';
+  int _kebiasaanHaid = 0;
 
   @override
   void initState() {
@@ -60,6 +63,10 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
 
   Future<void> _loadCurrentRecord() async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final haidStatus = prefs.getString('haid_status') ?? 'Sudah Biasa';
+      final kebiasaanHaid = prefs.getInt('kebiasaan_haid') ?? 0;
+
       final allRecords = await haidService.getAllRecords();
       final current = await haidService.getCurrentActiveRecord();
       final nextPredictedDate =
@@ -69,10 +76,12 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
         setState(() {
           _currentRecord = current;
           _allRecords = allRecords;
+          _haidStatus = haidStatus;
+          _kebiasaanHaid = kebiasaanHaid;
 
           // Logika untuk status Home Page - use detailed status for accurate display
           _hukumStatus =
-              fikihService.getHukumStatus(DateTime.now(), allRecords);
+              fikihService.getHukumStatus(DateTime.now(), allRecords, haidStatus: _haidStatus, kebiasaanHaid: _kebiasaanHaid);
 
           _nextPredictedDate = nextPredictedDate;
         });
@@ -172,6 +181,121 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
       allowFuture: false,
     );
     if (selectedDateTime == null) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    final haidStatus = prefs.getString('haid_status') ?? 'Sudah Biasa';
+    int kebiasaanHaid = prefs.getInt('kebiasaan_haid') ?? 0;
+
+    if (haidStatus == 'Sudah Biasa' && kebiasaanHaid <= 0) {
+      if (!mounted) return;
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) {
+          final TextEditingController controller = TextEditingController();
+          return AlertDialog(
+            title: const Text('Kebiasaan Haid', style: TextStyle(fontWeight: FontWeight.bold)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Anda belum memasukkan kebiasaan haid. Berapa hari biasanya haid anda?'),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: controller,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  decoration: InputDecoration(
+                    labelText: 'Jumlah hari',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(), // Cancel
+                child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  final val = int.tryParse(controller.text);
+                  if (val != null && val > 0) {
+                    await prefs.setInt('kebiasaan_haid', val);
+                    kebiasaanHaid = val;
+                    if (context.mounted) Navigator.of(context).pop();
+                  }
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: secondaryColor, foregroundColor: Colors.white),
+                child: const Text('Simpan'),
+              ),
+            ],
+          );
+        },
+      );
+      if (kebiasaanHaid <= 0) return; // Stop if still no valid input
+    }
+
+    final lastEndedRecord = await haidService.getLastEndedRecord();
+
+    if (haidStatus == 'Sudah Biasa' && lastEndedRecord != null && lastEndedRecord.endDate != null) {
+      final selectedDateMidnight = DateTime(selectedDateTime.year, selectedDateTime.month, selectedDateTime.day);
+      final lastEndDateMidnight = DateTime(lastEndedRecord.endDate!.year, lastEndedRecord.endDate!.month, lastEndedRecord.endDate!.day);
+      final masaSuciDays = selectedDateMidnight.difference(lastEndDateMidnight).inDays;
+
+      if (masaSuciDays < 15) {
+        if (!mounted) return;
+        final bool? resume = await showDialog<bool>(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: const Text('Peringatan', style: TextStyle(fontWeight: FontWeight.bold)),
+              content: const Text(
+                'Masa suci anda masih belum sampai 15 hari apakah ada darah keluar lagi?, status hukum haid mungkin akan berubah',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: const Text('Ok', style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold)),
+                ),
+              ],
+            );
+          },
+        );
+
+        if (resume == true) {
+          setState(() => _isLoading = true);
+          try {
+            await haidService.resumeHaid(lastEndedRecord);
+            await haidService.logBloodEvent(selectedDateTime, 'CONTINUE_FLOW');
+            await NotificationService().scheduleDailyRecordingReminder();
+            await _loadCurrentRecord();
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Pencatatan dilanjutkan. Status diperbarui.')),
+              );
+            }
+          } catch (e) {
+            debugPrint("Error saat melanjutkan haid: $e");
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Gagal melanjutkan pencatatan: ${e.toString()}')),
+              );
+            }
+          } finally {
+            if (mounted) {
+              setState(() => _isLoading = false);
+            }
+          }
+          return; // Stop here, don't create new record
+        } else {
+          return; // Cancelled by user
+        }
+      }
+    }
 
     setState(() => _isLoading = true);
 
@@ -461,7 +585,7 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                           builder: (context) {
                             final statusDetail =
                                 fikihService.getDetailedHukumStatus(
-                                    DateTime.now(), _allRecords);
+                                    DateTime.now(), _allRecords, haidStatus: _haidStatus, kebiasaanHaid: _kebiasaanHaid);
                             final message = statusDetail['message'] as String?;
                             if (message != null && message.isNotEmpty) {
                               return Container(

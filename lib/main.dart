@@ -13,6 +13,7 @@ import 'pages/calendar_page.dart';
 import 'pages/settings_page.dart';
 import 'pages/cycle_tracker_page.dart';
 import 'pages/six_records_form.dart';
+import 'pages/kebiasaan_haid_dialog.dart';
 
 final FikihService fikihService = FikihService();
 final HaidService haidService = HaidService();
@@ -77,10 +78,10 @@ class _NameInputScreenState extends State<NameInputScreen> {
     }
   }
 
-  void _showPredictionQuestionDialog(BuildContext context, String name) {
+  void _showPredictionQuestionDialog(BuildContext parentContext, String name) {
     showDialog(
-      context: context,
-      builder: (BuildContext context) {
+      context: parentContext,
+      builder: (BuildContext dialogContext) {
         return AlertDialog(
           title: const Text('Apakah anda ingin memprediksi haid berikutnya?'),
           shape: RoundedRectangleBorder(
@@ -89,41 +90,21 @@ class _NameInputScreenState extends State<NameInputScreen> {
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop();
+                Navigator.of(dialogContext).pop();
                 // Go to home page, set prediction status as not started
                 SharedPreferences.getInstance().then((prefs) {
                   prefs.setBool('prediction_skipped', true);
                 });
-                Navigator.of(context).pushReplacement(
-                  PageRouteBuilder(
-                    pageBuilder: (context, animation, secondaryAnimation) =>
-                        const MainScreen(),
-                    transitionsBuilder:
-                        (context, animation, secondaryAnimation, child) {
-                      const begin = Offset(1.0, 0.0);
-                      const end = Offset.zero;
-                      const curve = Curves.easeInOutCubic;
-
-                      var tween = Tween(begin: begin, end: end)
-                          .chain(CurveTween(curve: curve));
-                      var offsetAnimation = animation.drive(tween);
-
-                      return SlideTransition(
-                        position: offsetAnimation,
-                        child: child,
-                      );
-                    },
-                    transitionDuration: const Duration(milliseconds: 500),
-                  ),
-                );
+                // Tampilkan dialog kebiasaan haid
+                showKebiasaanHaidDialog(parentContext, isFromMainScreen: false);
               },
               child: const Text('Lewati'),
             ),
             ElevatedButton(
               onPressed: () {
-                Navigator.of(context).pop();
+                Navigator.of(dialogContext).pop();
                 // Show 6 records form as bottom sheet
-                showSixRecordsBottomSheet(context, name);
+                showSixRecordsBottomSheet(parentContext, name, isFromMainScreen: false);
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: secondaryColor,

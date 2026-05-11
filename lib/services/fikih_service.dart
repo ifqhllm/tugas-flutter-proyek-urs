@@ -2,7 +2,7 @@ import '../models/haid_record.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class FikihService {
-  Map<String, dynamic> _getFinalStatus(HaidRecord record) {
+  Map<String, dynamic> _getFinalStatus(HaidRecord record, {required String haidStatus, required int kebiasaanHaid}) {
     // Hitung durasi dalam hari dari start sampai waktu saat ini (atau endDate jika sudah diakhiri)
     final endTime = record.endDate ?? DateTime.now();
     final endDay = DateTime(endTime.year, endTime.month, endTime.day);
@@ -51,17 +51,29 @@ class FikihService {
     }
 
     // Scenario 3: Duration exceeds 15 days (even if user hasn't ended haid yet)
-    // Status: "ISTIHADAH LEBIH DARI 15 HARI"
+    // Status: "ISTIHADAH LEBIH DARI 15 HARI" atau dikembalikan ke Kebiasaan Haid
     if (exceeds15Days) {
-      return {
-        'status': 'ISTIHADAH LEBIH DARI 15 HARI',
-        'type': 'ISTIHADAH_LONG',
-        'haidDays': 0,
-        'istihadahDays': totalDurationDays,
-        'predictionDays': 0,
-        'message':
-            'Karena lebih dari 15 hari maka haid anda tergantung status mustahadahnya. Silahkan baca materi tentang mustahadah',
-      };
+      if (haidStatus == 'Sudah Biasa' && kebiasaanHaid > 0) {
+        return {
+          'status': 'HAID SELAMA $kebiasaanHaid HARI',
+          'type': 'HAID',
+          'haidDays': kebiasaanHaid,
+          'istihadahDays': totalDurationDays - kebiasaanHaid,
+          'predictionDays': kebiasaanHaid,
+          'message':
+              '$kebiasaanHaid hari haid mengikuti kebiasaan haid yang anda inputkan, selebihnya istihadah',
+        };
+      } else {
+        return {
+          'status': 'ISTIHADAH LEBIH DARI 15 HARI',
+          'type': 'ISTIHADAH_LONG',
+          'haidDays': 0,
+          'istihadahDays': totalDurationDays,
+          'predictionDays': 0,
+          'message':
+              'Karena lebih dari 15 hari maka haid anda tergantung status mustahadahnya. Silahkan baca materi tentang mustahadah',
+        };
+      }
     }
 
     // Active haid (within 15 days, 24+ hours, not ended yet) - showing current status
@@ -87,7 +99,7 @@ class FikihService {
   }
 
   // --- 2. Mendapatkan Status Hukum untuk tanggal tertentu ---
-  String getHukumStatus(DateTime date, List<HaidRecord> allRecords) {
+  String getHukumStatus(DateTime date, List<HaidRecord> allRecords, {String haidStatus = 'Sudah Biasa', int kebiasaanHaid = 0}) {
     if (allRecords.isEmpty) {
       return 'SUCI (Belum ada riwayat)';
     }
@@ -100,7 +112,7 @@ class FikihService {
 
       if (record.endDate == null) {
         if (checkDate.isAtSameMomentAs(start) || checkDate.isAfter(start)) {
-          final statusDetail = getDetailedHukumStatus(checkDate, allRecords);
+          final statusDetail = getDetailedHukumStatus(checkDate, allRecords, haidStatus: haidStatus, kebiasaanHaid: kebiasaanHaid);
           return statusDetail['status'] as String;
         }
       } else {
@@ -109,7 +121,7 @@ class FikihService {
 
         if ((checkDate.isAtSameMomentAs(start) || checkDate.isAfter(start)) &&
             (checkDate.isBefore(end) || checkDate.isAtSameMomentAs(end))) {
-          final statusMap = _getFinalStatus(record);
+          final statusMap = _getFinalStatus(record, haidStatus: haidStatus, kebiasaanHaid: kebiasaanHaid);
           return statusMap['status'] as String;
         }
       }
@@ -120,7 +132,7 @@ class FikihService {
 
   // --- Mendapatkan Detail Status Lengkap ---
   Map<String, dynamic> getDetailedHukumStatus(
-      DateTime date, List<HaidRecord> allRecords) {
+      DateTime date, List<HaidRecord> allRecords, {String haidStatus = 'Sudah Biasa', int kebiasaanHaid = 0}) {
     if (allRecords.isEmpty) {
       return {'status': 'SUCI (Belum ada riwayat)', 'type': 'SUCI'};
     }
@@ -146,15 +158,27 @@ class FikihService {
 
           // Active cycle exceeding 15 days
           if (exceeds15Days) {
-            return {
-              'status': 'ISTIHADAH LEBIH DARI 15 HARI',
-              'type': 'ISTIHADAH_LONG',
-              'haidDays': 0,
-              'istihadahDays': totalDurationDays,
-              'predictionDays': 0,
-              'message':
-                  'Karena lebih dari 15 hari maka haid anda tergantung status mustahadahnya. Silahkan baca materi tentang mustahadah',
-            };
+            if (haidStatus == 'Sudah Biasa' && kebiasaanHaid > 0) {
+              return {
+                'status': 'HAID SELAMA $kebiasaanHaid HARI',
+                'type': 'HAID',
+                'haidDays': kebiasaanHaid,
+                'istihadahDays': totalDurationDays - kebiasaanHaid,
+                'predictionDays': kebiasaanHaid,
+                'message':
+                    '$kebiasaanHaid hari haid mengikuti kebiasaan haid yang anda inputkan, selebihnya istihadah',
+              };
+            } else {
+              return {
+                'status': 'ISTIHADAH LEBIH DARI 15 HARI',
+                'type': 'ISTIHADAH_LONG',
+                'haidDays': 0,
+                'istihadahDays': totalDurationDays,
+                'predictionDays': 0,
+                'message':
+                    'Karena lebih dari 15 hari maka haid anda tergantung status mustahadahnya. Silahkan baca materi tentang mustahadah',
+              };
+            }
           }
 
           // Active haid (within 15 days and 24+ hours)
@@ -186,7 +210,7 @@ class FikihService {
 
         if ((checkDate.isAtSameMomentAs(start) || checkDate.isAfter(start)) &&
             (checkDate.isBefore(end) || checkDate.isAtSameMomentAs(end))) {
-          return _getFinalStatus(record);
+          return _getFinalStatus(record, haidStatus: haidStatus, kebiasaanHaid: kebiasaanHaid);
         }
       }
     }

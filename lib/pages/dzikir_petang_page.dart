@@ -185,7 +185,7 @@ class _DzikirPetangPageState extends State<DzikirPetangPage> {
           _buildContentBox(
             title: '9. Membaca Dzikir V (3 Kali)',
             arabic: 'بِسْمِ اللَّهِ لَا يَضُرُّ مَعَ اسْمِهِ شَيْءٌ فِي الْأَرْضِ وَلَا فِي السَّمَاءِ وَهُوَ السَّمِيعُ الْعَلِيمُ.',
-            latin: 'Bismillaahii laa yadhurru ma\'asmihi syai-un fil ardhi wa laa fissamaa-i wahuwas samii\'ul \'aliim.',
+            latin: 'Bismillaahii laa yadhurru ma''asmihi syai-un fil ardhi wa laa fissamaa-i wahuwas samii\'ul \'aliim.',
             translation: '"Dengan nama Allah yang jika disebut, segala sesuatu di bumi dan langit tidak akan berbahaya. Dialah Yang Maha Mendengar lagi Maha Mengetahui."',
           ),
           const SizedBox(height: 12),
