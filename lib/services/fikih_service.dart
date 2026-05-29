@@ -53,7 +53,17 @@ class FikihService {
     // Scenario 3: Duration exceeds 15 days (even if user hasn't ended haid yet)
     // Status: "ISTIHADAH LEBIH DARI 15 HARI" atau dikembalikan ke Kebiasaan Haid
     if (exceeds15Days) {
-      if (haidStatus == 'Sudah Biasa' && kebiasaanHaid > 0) {
+      if (haidStatus == 'Baru Mengalami') {
+        return {
+          'status': 'HAID SELAMA 15 HARI',
+          'type': 'HAID',
+          'haidDays': 15,
+          'istihadahDays': totalDurationDays - 15,
+          'predictionDays': 15,
+          'message':
+              "karena ini adalah haid pertama anda maka sesuai hukum syari'at haid anda adalah 15 hari selebihnya istihadah",
+        };
+      } else if (haidStatus == 'Sudah Biasa' && kebiasaanHaid > 0) {
         return {
           'status': 'HAID SELAMA $kebiasaanHaid HARI',
           'type': 'HAID',
@@ -158,7 +168,17 @@ class FikihService {
 
           // Active cycle exceeding 15 days
           if (exceeds15Days) {
-            if (haidStatus == 'Sudah Biasa' && kebiasaanHaid > 0) {
+            if (haidStatus == 'Baru Mengalami') {
+              return {
+                'status': 'HAID SELAMA 15 HARI',
+                'type': 'HAID',
+                'haidDays': 15,
+                'istihadahDays': totalDurationDays - 15,
+                'predictionDays': 15,
+                'message':
+                    "karena ini adalah haid pertama anda maka sesuai hukum syari'at haid anda adalah 15 hari selebihnya istihadah",
+              };
+            } else if (haidStatus == 'Sudah Biasa' && kebiasaanHaid > 0) {
               return {
                 'status': 'HAID SELAMA $kebiasaanHaid HARI',
                 'type': 'HAID',

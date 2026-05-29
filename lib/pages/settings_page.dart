@@ -5,6 +5,7 @@ import '../main.dart' as main;
 import '../services/notification_service.dart';
 import '../widgets/background_widget.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -133,51 +134,95 @@ class _SettingsPageState extends State<SettingsPage> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Row(
-              children: [
-                const Expanded(
-                  child: Text(
-                    'WhatsApp: 081918151339',
-                    style: TextStyle(fontSize: 16),
-                  ),
+            InkWell(
+              onTap: () async {
+                final Uri url = Uri.parse('https://wa.me/6281918151339');
+                try {
+                  if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+                    throw Exception('Could not launch $url');
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Gagal membuka WhatsApp: $e')),
+                    );
+                  }
+                }
+              },
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+                child: Row(
+                  children: [
+                    const Icon(Icons.phone_android, color: Colors.green),
+                    const SizedBox(width: 10),
+                    const Expanded(
+                      child: Text(
+                        'WhatsApp: 081918151339',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.copy, size: 20),
+                      onPressed: () async {
+                        await Clipboard.setData(
+                            const ClipboardData(text: '081918151339'));
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text('Nomor WhatsApp berhasil disalin')),
+                          );
+                        }
+                      },
+                    ),
+                  ],
                 ),
-                IconButton(
-                  icon: const Icon(Icons.copy),
-                  onPressed: () async {
-                    await Clipboard.setData(
-                        const ClipboardData(text: '081918151339'));
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('Nomor WhatsApp berhasil disalin')),
-                      );
-                    }
-                  },
-                ),
-              ],
+              ),
             ),
             const SizedBox(height: 10),
-            Row(
-              children: [
-                const Expanded(
-                  child: Text(
-                    'Email: ifqohululum@gmail.com',
-                    style: TextStyle(fontSize: 16),
-                  ),
+            InkWell(
+              onTap: () async {
+                final Uri url = Uri.parse('mailto:ifqohululum@gmail.com?subject=Tanya%20Jawab%20Al-Heedh');
+                try {
+                  if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+                    throw Exception('Could not launch $url');
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Gagal membuka Email: $e')),
+                    );
+                  }
+                }
+              },
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+                child: Row(
+                  children: [
+                    const Icon(Icons.email, color: primaryColor),
+                    const SizedBox(width: 10),
+                    const Expanded(
+                      child: Text(
+                        'Email: ifqohululum@gmail.com',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.copy, size: 20),
+                      onPressed: () async {
+                        await Clipboard.setData(
+                            const ClipboardData(text: 'ifqohululum@gmail.com'));
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Email berhasil disalin')),
+                          );
+                        }
+                      },
+                    ),
+                  ],
                 ),
-                IconButton(
-                  icon: const Icon(Icons.copy),
-                  onPressed: () async {
-                    await Clipboard.setData(
-                        const ClipboardData(text: 'ifqohululum@gmail.com'));
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Email berhasil disalin')),
-                      );
-                    }
-                  },
-                ),
-              ],
+              ),
             ),
           ],
         ),
@@ -190,6 +235,219 @@ class _SettingsPageState extends State<SettingsPage> {
       ),
     );
   }
+
+  void _showAboutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.info_outline, color: primaryColor),
+            const SizedBox(width: 10),
+            const Text('Tentang Aplikasi'),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Column(
+                  children: [
+                    Container(
+                      width: 70,
+                      height: 70,
+                      decoration: BoxDecoration(
+                        color: primaryColor.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.favorite,
+                        color: primaryColor,
+                        size: 40,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'Al-Heedh',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: primaryColor,
+                      ),
+                    ),
+                    const Text(
+                      'Solusi Cerdas Muslimah • v1.0.0',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Biodata Pengembang',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Card(
+                elevation: 0,
+                color: Color(0xFFFFF5F7),
+                child: Padding(
+                  padding: EdgeInsets.all(12.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(Icons.person, size: 18, color: primaryColor),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Nama: Ifqohul Ulum',
+                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.black87),
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 8),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(Icons.badge, size: 18, color: primaryColor),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'NIM: 2022020100014',
+                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.black87),
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 8),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(Icons.school, size: 18, color: primaryColor),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Pendidikan: Program Studi Teknik Informatika, Fakultas Teknik, Universitas Islam Madura',
+                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, height: 1.3, color: Colors.black87),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 15),
+              const Text(
+                'Mengapa Aplikasi Ini Dibuat?',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Aplikasi Al-Heedh dibuat atas kesadaran bahwa pemahaman tentang darah kewanitaan (Haid, Istihadah, dan Nifas) adalah ilmu fardhu \'ain yang wajib dipelajari setiap muslimah karena berkaitan erat dengan keabsahan ibadah shalat dan puasa.\n\nSeringkali, kerumitan perhitungan hari haid dan masa suci menimbulkan keraguan dalam beribadah. Melalui Al-Heedh, pengembang berkomitmen menghadirkan solusi teknologi cerdas yang dapat mengotomatisasi perhitungan hukum Fiqh (khususnya Madzhab Sya\'i) secara otomatis dan akurat, guna membantu para muslimah beribadah dengan penuh kepastian dan ketenangan jiwa.',
+                style: TextStyle(
+                  fontSize: 13,
+                  height: 1.5,
+                  color: Colors.black54,
+                ),
+                textAlign: TextAlign.justify,
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryColor,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                      ),
+                      icon: const Icon(Icons.rate_review, size: 18),
+                      label: const Text('Beri Saran', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                      onPressed: () async {
+                        final Uri url = Uri.parse(
+                            'https://wa.me/6281918151339?text=Assalamualaikum%20Kak%20Ifqoh,%20saya%20ingin%20memberikan%20saran%20mengenai%20aplikasi%20Al-Heedh...');
+                        try {
+                          if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+                            throw Exception('Could not launch $url');
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Gagal membuka WhatsApp: $e')),
+                            );
+                          }
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: primaryColor),
+                        foregroundColor: primaryColor,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                      ),
+                      icon: const Icon(Icons.star_rate, size: 18),
+                      label: const Text('Beri Penilaian', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                      onPressed: () async {
+                        final Uri url = Uri.parse('https://play.google.com/store/apps/details?id=com.alheedh.app');
+                        try {
+                          if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+                            throw Exception('Could not launch $url');
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Akan segera tersedia setelah aplikasi rilis di Google Play Store! Terima kasih atas dukungan Anda.'),
+                                duration: Duration(seconds: 4),
+                              ),
+                            );
+                          }
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Tutup'),
+          ),
+        ],
+      ),
+    );
+  } }
 
   @override
   Widget build(BuildContext context) {
@@ -216,6 +474,28 @@ class _SettingsPageState extends State<SettingsPage> {
               value: _recordingReminderEnabled,
               onChanged: _updateRecordingReminder,
             ),
+            ListTile(
+              leading: const Icon(Icons.notifications_active, color: primaryColor),
+              title: const Text('Tes Notifikasi Instan',
+                  style: TextStyle(color: Colors.black)),
+              subtitle: const Text('Kirim notifikasi uji coba langsung ke HP Anda'),
+              onTap: () async {
+                try {
+                  await NotificationService().showInstantTestNotification();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Notifikasi tes berhasil dikirim!')),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Gagal mengirim notifikasi tes: $e')),
+                    );
+                  }
+                }
+              },
+            ),
             const Divider(),
             ListTile(
               leading: const Icon(Icons.delete_sweep, color: primaryColor),
@@ -237,9 +517,7 @@ class _SettingsPageState extends State<SettingsPage> {
               title: const Text('Tentang Aplikasi',
                   style: TextStyle(color: Colors.black)),
               subtitle: const Text('Versi 1.0.0'),
-              onTap: () {
-                // Aksi navigasi atau dialog info
-              },
+              onTap: () => _showAboutDialog(context),
             ),
             ListTile(
               leading: const Icon(Icons.message, color: primaryColor),

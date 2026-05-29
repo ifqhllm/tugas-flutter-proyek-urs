@@ -221,4 +221,31 @@ class NotificationService {
     debugPrint(
         'Daily recording reminder scheduled for 5:00 AM (ID: $reminderId).');
   }
+
+  Future<void> showInstantTestNotification() async {
+    const int testId = 888888;
+    const String title = 'Tes Notifikasi Al-Heedh';
+    const String body = 'Assalamualaikum! Ini adalah tes notifikasi instan dari aplikasi Al-Heedh. Fitur notifikasi Anda aktif!';
+
+    await flutterLocalNotificationsPlugin.show(
+      testId,
+      title,
+      body,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'reminder_channel',
+          'Pengingat Harian',
+          channelDescription: 'Pengingat rutin untuk pencatatan',
+          importance: Importance.high,
+          priority: Priority.high,
+          enableVibration: true,
+        ),
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
+      ),
+    );
+  }
 }

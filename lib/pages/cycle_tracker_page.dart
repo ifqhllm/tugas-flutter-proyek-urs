@@ -64,10 +64,28 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
   Future<void> _loadCurrentRecord() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final haidStatus = prefs.getString('haid_status') ?? 'Sudah Biasa';
-      final kebiasaanHaid = prefs.getInt('kebiasaan_haid') ?? 0;
+      var haidStatus = prefs.getString('haid_status') ?? 'Sudah Biasa';
+      var kebiasaanHaid = prefs.getInt('kebiasaan_haid') ?? 0;
 
       final allRecords = await haidService.getAllRecords();
+
+      // Auto-migrate first-time user to accustomed if they already have completed cycles
+      if (haidStatus == 'Baru Mengalami') {
+        final completed = allRecords.where((r) => r.endDate != null).toList();
+        if (completed.isNotEmpty) {
+          completed.sort((a, b) => b.endDate!.compareTo(a.endDate!));
+          final lastRecord = completed.first;
+          final totalDurationDays = lastRecord.endDate!.difference(lastRecord.startDate).inDays + 1;
+          final kebiasaanVal = totalDurationDays.clamp(1, 15);
+
+          await prefs.setString('haid_status', 'Sudah Biasa');
+          await prefs.setInt('kebiasaan_haid', kebiasaanVal);
+
+          haidStatus = 'Sudah Biasa';
+          kebiasaanHaid = kebiasaanVal;
+        }
+      }
+
       final current = await haidService.getCurrentActiveRecord();
       final nextPredictedDate =
           await fikihService.getNextPredictedStartDate(allRecords);
@@ -237,7 +255,7 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
 
     final lastEndedRecord = await haidService.getLastEndedRecord();
 
-    if (haidStatus == 'Sudah Biasa' && lastEndedRecord != null && lastEndedRecord.endDate != null) {
+    if (lastEndedRecord != null && lastEndedRecord.endDate != null) {
       final selectedDateMidnight = DateTime(selectedDateTime.year, selectedDateTime.month, selectedDateTime.day);
       final lastEndDateMidnight = DateTime(lastEndedRecord.endDate!.year, lastEndedRecord.endDate!.month, lastEndedRecord.endDate!.day);
       final masaSuciDays = selectedDateMidnight.difference(lastEndDateMidnight).inDays;
@@ -381,8 +399,19 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
     setState(() => _isLoading = true);
 
     try {
+      final wasBaruMengalami = _haidStatus == 'Baru Mengalami';
+      final activeRecord = _currentRecord;
+
       // Panggil service untuk END FINAL (ini akan mengisi endDate dan memicu kalkulasi)
       await haidService.endHaidFinal(selectedDateTime);
+
+      if (wasBaruMengalami && activeRecord != null) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('haid_status', 'Sudah Biasa');
+        final totalDurationDays = selectedDateTime.difference(activeRecord.startDate).inDays + 1;
+        final kebiasaanVal = totalDurationDays.clamp(1, 15);
+        await prefs.setInt('kebiasaan_haid', kebiasaanVal);
+      }
 
       // Cancel recording reminder
       await NotificationService().cancelRecordingReminder();
@@ -956,7 +985,7 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                             // Completed cycle - get detailed status
                             final statusDetail =
                                 fikihService.getDetailedHukumStatus(
-                                    record.endDate!, _allRecords);
+                                    record.endDate!, _allRecords, haidStatus: _haidStatus, kebiasaanHaid: _kebiasaanHaid);
                             final statusType = statusDetail['type'] as String;
                             final totalDays = record.endDate!
                                     .difference(record.startDate)
@@ -981,7 +1010,7 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                             // Ongoing cycle - get status based on current duration
                             final today = DateTime.now();
                             final statusDetail = fikihService
-                                .getDetailedHukumStatus(today, _allRecords);
+                                .getDetailedHukumStatus(today, _allRecords, haidStatus: _haidStatus, kebiasaanHaid: _kebiasaanHaid);
                             final statusType = statusDetail['type'] as String;
 
                             if (statusType == 'HAID_ACTIVE') {

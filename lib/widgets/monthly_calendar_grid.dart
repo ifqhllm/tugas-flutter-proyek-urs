@@ -8,6 +8,9 @@ class MonthlyCalendarGrid extends StatelessWidget {
   final List<HaidRecord> records;
   final DateTime? predictedDate;
   final FikihService fikihService;
+  final String haidStatus;
+  final int kebiasaanHaid;
+  final bool predictionCompleted;
   final VoidCallback? onPreviousMonth;
   final VoidCallback? onNextMonth;
 
@@ -17,6 +20,9 @@ class MonthlyCalendarGrid extends StatelessWidget {
     required this.records,
     this.predictedDate,
     required this.fikihService,
+    this.haidStatus = 'Sudah Biasa',
+    this.kebiasaanHaid = 0,
+    this.predictionCompleted = false,
     this.onPreviousMonth,
     this.onNextMonth,
   });
@@ -24,8 +30,8 @@ class MonthlyCalendarGrid extends StatelessWidget {
   Color? _getMarkerColor(DateTime day) {
     final normalizedDay = DateTime(day.year, day.month, day.day);
 
-    // 1. Cek Prediksi
-    if (predictedDate != null) {
+    // 1. Cek Prediksi (Hanya diwarnai jika user 'Sudah Biasa' dan setup prediksi selesai)
+    if (haidStatus == 'Sudah Biasa' && predictionCompleted && predictedDate != null) {
       final predictionDay = DateTime(
           predictedDate!.year, predictedDate!.month, predictedDate!.day);
 
@@ -57,7 +63,7 @@ class MonthlyCalendarGrid extends StatelessWidget {
         // Dapatkan detail status lengkap
         final checkDate = normalizedDay;
         final statusDetail =
-            fikihService.getDetailedHukumStatus(checkDate, [record]);
+            fikihService.getDetailedHukumStatus(checkDate, records, haidStatus: haidStatus, kebiasaanHaid: kebiasaanHaid);
         final statusType = statusDetail['type'] as String;
         final haidDays = statusDetail['haidDays'] as int? ?? 0;
 
@@ -66,14 +72,18 @@ class MonthlyCalendarGrid extends StatelessWidget {
 
         // Logika pewarnaan berdasarkan scenario
         if (statusType == 'HAID') {
-          // Scenario 1: Semua hari adalah haid
+          if (haidDays > 0) {
+            if (dayIndex < haidDays) {
+              return menstrualColor; // Merah
+            } else {
+              return istihadahColor; // Hijau
+            }
+          }
           return menstrualColor; // Merah
         } else if (statusType == 'ISTIHADAH_SHORT' ||
             statusType == 'ISTIHADAH_LONG') {
-          // Scenarios 2 & 3: Semua hari adalah istihadah (0 haid days)
           return istihadahColor; // Hijau
         } else if (statusType == 'HAID_ACTIVE') {
-          // Active haid within 15 days and 24+ hours - orange/red
           return menstrualColor; // Merah untuk hari haid aktif
         }
       }

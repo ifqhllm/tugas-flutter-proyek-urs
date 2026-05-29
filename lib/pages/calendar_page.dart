@@ -1,6 +1,7 @@
 // lib/pages/calendar_page.dart
 
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/haid_record.dart'; // Sesuaikan path-nya
 import '../services/fikih_service.dart'; // Sesuaikan path-nya
 import '../constants/colors.dart'; // Import warna dan kunci
@@ -22,7 +23,9 @@ class CalendarPage extends StatefulWidget {
 
 class _CalendarPageState extends State<CalendarPage> {
   late DateTime _focusedDay;
-  // Di dalam class _CalendarPageState extends State<CalendarPage> { ... }
+  String _haidStatus = 'Sudah Biasa';
+  int _kebiasaanHaid = 0;
+  bool _predictionCompleted = false;
 
 // Helper untuk membangun satu baris keterangan
   Widget _buildLegendItem({
@@ -120,6 +123,24 @@ class _CalendarPageState extends State<CalendarPage> {
   void initState() {
     super.initState();
     _focusedDay = DateTime(DateTime.now().year, DateTime.now().month);
+    _loadPrefs();
+  }
+
+  @override
+  void didUpdateWidget(covariant CalendarPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _loadPrefs();
+  }
+
+  Future<void> _loadPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        _haidStatus = prefs.getString('haid_status') ?? 'Sudah Biasa';
+        _kebiasaanHaid = prefs.getInt('kebiasaan_haid') ?? 0;
+        _predictionCompleted = prefs.getBool('prediction_completed') ?? false;
+      });
+    }
   }
 
   void _previousMonth() {
@@ -154,6 +175,9 @@ class _CalendarPageState extends State<CalendarPage> {
               records: widget.records,
               predictedDate: widget.predictedDate,
               fikihService: fikihService,
+              haidStatus: _haidStatus,
+              kebiasaanHaid: _kebiasaanHaid,
+              predictionCompleted: _predictionCompleted,
               onPreviousMonth: _previousMonth,
               onNextMonth: _nextMonth,
             ),
