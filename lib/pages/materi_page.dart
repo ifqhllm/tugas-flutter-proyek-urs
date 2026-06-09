@@ -25,6 +25,7 @@ import 'hukum_perempuan_istihadah_page.dart';
 import 'kewajiban_perempuan_istihadah_page.dart';
 import 'tatacara_sholat_dan_bersuci_page.dart';
 import 'mustahadah_page.dart';
+import 'hukum_haid_terputus_page.dart';
 
 class MateriPage extends StatefulWidget {
   const MateriPage({super.key});
@@ -66,6 +67,7 @@ class _MateriPageState extends State<MateriPage> {
     'Kewajiban perempuan istihadah',
     'Tatacara Sholat dan bersuci',
     'Mustahadah (perempuan istihadah)',
+    'Hukum haid yang terputus',
   ];
 
   @override
@@ -235,6 +237,11 @@ class _MateriPageState extends State<MateriPage> {
       } else if (number == 6) {
         Navigator.push(context,
             MaterialPageRoute(builder: (context) => const MustahadahPage()));
+      } else if (number == 7) {
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => const HukumHaidTerputusPage()));
       }
     }
   }
@@ -295,7 +302,7 @@ class _MateriPageState extends State<MateriPage> {
                   SnackBar(
                     content: const Text(
                       'Belum ada materi yang disimpan',
-                      style: TextStyle(fontFamily: 'Poppins'),
+                      style: const TextStyle(fontFamily: 'Poppins'),
                     ),
                     backgroundColor: secondaryColor,
                     duration: const Duration(seconds: 2),
@@ -364,9 +371,9 @@ class _MateriPageState extends State<MateriPage> {
                   ),
                 )
               else
-                ...savedInCurrentTab.map((num) {
+                ...savedInCurrentTab.map((bookmarkNum) {
                   final list = _selectedIndex == 0 ? _haidList : _istihadahList;
-                  final title = list[num - currentListStart];
+                  final title = list[bookmarkNum - currentListStart];
                   return ListTile(
                     leading: Container(
                       width: 40,
@@ -377,7 +384,7 @@ class _MateriPageState extends State<MateriPage> {
                       ),
                       child: Center(
                         child: Text(
-                          '$num',
+                          '$bookmarkNum',
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
@@ -396,14 +403,15 @@ class _MateriPageState extends State<MateriPage> {
                     trailing: IconButton(
                       icon: const Icon(Icons.delete_outline, color: Colors.red),
                       onPressed: () async {
-                        await _toggleBookmark(num);
+                        await _toggleBookmark(bookmarkNum);
+                        if (!context.mounted) return;
                         Navigator.pop(context);
                         _showSavedMaterials();
                       },
                     ),
                     onTap: () {
                       Navigator.pop(context);
-                      _navigateToPage(num);
+                      _navigateToPage(bookmarkNum);
                     },
                   );
                 }),
@@ -667,6 +675,12 @@ class _MateriPageState extends State<MateriPage> {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const MustahadahPage()),
+            );
+          } else if (number == 7) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => const HukumHaidTerputusPage()),
             );
           }
         }

@@ -1,110 +1,181 @@
 import '../models/haid_record.dart';
+import '../models/blood_event.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class FikihService {
-  Map<String, dynamic> _getFinalStatus(HaidRecord record, {required String haidStatus, required int kebiasaanHaid}) {
-    // Hitung durasi dalam hari dari start sampai waktu saat ini (atau endDate jika sudah diakhiri)
+  Map<String, dynamic> _calculateRecordPeriods(HaidRecord record) {
     final endTime = record.endDate ?? DateTime.now();
+    final totalSpanHours = endTime.difference(record.startDate).inHours;
+
+    final events = List<BloodEvent>.from(record.bloodEvents);
+    events.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+
+    int totalRecordedHours = 0;
+    DateTime currentStart = record.startDate;
+    bool isFlowing = true;
+
+    for (var event in events) {
+      if (event.type == 'END') {
+        if (isFlowing) {
+          totalRecordedHours += event.timestamp.difference(currentStart).inHours;
+          isFlowing = false;
+        }
+      } else if (event.type == 'CONTINUE_FLOW' || event.type == 'START') {
+        if (!isFlowing) {
+          currentStart = event.timestamp;
+          isFlowing = true;
+        }
+      }
+    }
+
+    if (isFlowing) {
+      totalRecordedHours += endTime.difference(currentStart).inHours;
+    }
+
+    if (totalRecordedHours == 0) {
+      totalRecordedHours = totalSpanHours;
+    }
+
+    final hasInterruption = events.any((e) => e.type == 'CONTINUE_FLOW');
+
+    return {
+      'totalRecordedHours': totalRecordedHours,
+      'totalSpanHours': totalSpanHours,
+      'hasInterruption': hasInterruption,
+    };
+  }
+
+  Map<String, dynamic> _getFinalStatus(HaidRecord record, {required String haidStatus, required int kebiasaanHaid}) {
+    final endTime = record.endDate ?? DateTime.now();
+
     final endDay = DateTime(endTime.year, endTime.month, endTime.day);
     final startDay = DateTime(record.startDate.year, record.startDate.month, record.startDate.day);
     final totalDurationDays = endDay.difference(startDay).inDays + 1;
 
-    // Hitung jumlah event yang dicatat (setiap event = 1 jam)
-    final loggedHours = record.bloodEvents.length;
-    final loggedDays = (loggedHours / 24).ceil();
-
     // Batasan Fikih
     const int minHaidHours = 24; // Minimal haid 24 jam
-    const int maxHaidDays = 15; // Maksimal haid 15 hari
+    const int maxHaidHours = 360; // Maksimal haid 15 hari (15 * 24 = 360 jam)
 
-    // Check if currently 24+ hours and still within 15 days (active or ended)
-    final is24HoursOrMore = loggedHours >= minHaidHours;
-    final isWithin15Days = totalDurationDays <= maxHaidDays;
-    final exceeds15Days = totalDurationDays > maxHaidDays;
+    // Calculate periods with support for interrupted menstruation (darah terputus-putus)
+    final periods = _calculateRecordPeriods(record);
+    final int totalRecordedHours = periods['totalRecordedHours'] as int;
+    final int totalSpanHours = periods['totalSpanHours'] as int;
+    final bool hasInterruption = periods['hasInterruption'] as bool;
 
-    // Scenario 1: Recorded within 15 days AND 24+ hours recorded AND user ended haid
-    // Status: "HAID SELAMA ... days" based on total calendar duration
-    if (isWithin15Days && is24HoursOrMore && record.endDate != null) {
-      return {
-        'status': 'HAID SELAMA $totalDurationDays HARI',
-        'type': 'HAID',
-        'haidDays': totalDurationDays,
-        'istihadahDays': 0,
-        'predictionDays': totalDurationDays,
-      };
-    }
+    if (hasInterruption) {
+      if (totalSpanHours <= maxHaidHours) {
+        final totalDays = totalSpanHours ~/ 24;
+        final remainingHours = totalSpanHours % 24;
 
-    // Scenario 2: Recorded within 15 days BUT less than 24 hours total AND user ended haid
-    // Status: "ISTIHADAH KURANG DARI 24 JAM"
-    if (isWithin15Days &&
-        loggedHours < minHaidHours &&
-        record.endDate != null) {
-      return {
-        'status': 'ISTIHADAH KURANG DARI 24 JAM',
-        'type': 'ISTIHADAH_SHORT',
-        'haidDays': 0,
-        'istihadahDays': totalDurationDays,
-        'predictionDays': 0,
-        'message':
-            'Karena kurang dari 24 jam maka anda tidak memiliki hari haid. Silahkan Qadha\' sholat dan puasa jika ditinggalkan',
-      };
-    }
+        final statusStr = remainingHours > 0
+            ? 'HAID SELAMA $totalDays HARI $remainingHours JAM'
+            : 'HAID SELAMA $totalDays HARI';
 
-    // Scenario 3: Duration exceeds 15 days (even if user hasn't ended haid yet)
-    // Status: "ISTIHADAH LEBIH DARI 15 HARI" atau dikembalikan ke Kebiasaan Haid
-    if (exceeds15Days) {
-      if (haidStatus == 'Baru Mengalami') {
+        final statusVal = record.endDate == null ? 'HAID SEMENTARA' : statusStr;
+
+        final msg = 'Total Pencatatan $totalRecordedHours jam Maka Haid anda adalah $totalDays hari $remainingHours jam, Silahkan Baca Dalilnya melalui tombol berikut';
+
         return {
-          'status': 'HAID SELAMA 15 HARI',
+          'status': statusVal,
           'type': 'HAID',
-          'haidDays': 15,
-          'istihadahDays': totalDurationDays - 15,
-          'predictionDays': 15,
-          'message':
-              "karena ini adalah haid pertama anda maka sesuai hukum syari'at haid anda adalah 15 hari selebihnya istihadah",
-        };
-      } else if (haidStatus == 'Sudah Biasa' && kebiasaanHaid > 0) {
-        return {
-          'status': 'HAID SELAMA $kebiasaanHaid HARI',
-          'type': 'HAID',
-          'haidDays': kebiasaanHaid,
-          'istihadahDays': totalDurationDays - kebiasaanHaid,
-          'predictionDays': kebiasaanHaid,
-          'message':
-              '$kebiasaanHaid hari haid mengikuti kebiasaan haid yang anda inputkan, selebihnya istihadah',
+          'haidDays': totalDurationDays,
+          'istihadahDays': 0,
+          'predictionDays': totalDays,
+          'message': msg,
+          'showInterruptedHaidButton': true,
         };
       } else {
+        final haidDaysVal = kebiasaanHaid > 0 ? kebiasaanHaid : 15;
+        const statusStr = 'ISTIHADAH LEBIH 15 HARI';
+        final msg = 'Total Pencatatan $totalRecordedHours jam Terhitung lebih 15 hari tergolong istihadah maka haid anda adalah $haidDaysVal Hari mengikuti kebiasaan haid anda, Silahkan baca Dalilnya Melalui tombol berikut';
+
         return {
-          'status': 'ISTIHADAH LEBIH DARI 15 HARI',
+          'status': statusStr,
           'type': 'ISTIHADAH_LONG',
-          'haidDays': 0,
-          'istihadahDays': totalDurationDays,
-          'predictionDays': 0,
-          'message':
-              'Karena lebih dari 15 hari maka haid anda tergantung status mustahadahnya. Silahkan baca materi tentang mustahadah',
+          'haidDays': haidDaysVal,
+          'istihadahDays': totalDurationDays - haidDaysVal,
+          'predictionDays': haidDaysVal,
+          'message': msg,
+          'showInterruptedHaidButton': true,
         };
       }
     }
 
-    // Active haid (within 15 days, 24+ hours, not ended yet) - showing current status
-    if (is24HoursOrMore && record.endDate == null) {
+    // Default flow (no interruption)
+    // Scenario 1: Kurang dari 24 jam
+    if (totalRecordedHours < minHaidHours) {
+      if (record.endDate == null) {
+        return {
+          'status': 'HAID SEMENTARA',
+          'type': 'HAID_ACTIVE',
+          'haidDays': 0,
+          'istihadahDays': totalDurationDays,
+          'predictionDays': 0,
+          'message': 'Catat terus untuk status haid yang valid',
+        };
+      } else {
+        return {
+          'status': 'ISTIHADAH KURANG DARI 24 JAM',
+          'type': 'ISTIHADAH_SHORT',
+          'haidDays': 0,
+          'istihadahDays': totalDurationDays,
+          'predictionDays': 0,
+          'message':
+              'Total pencatatan $totalRecordedHours jam terhitung istihadah karena tidak mencapai minimal masa haid, silahkan baca dalilnya melalui tombol berikut',
+          'showMasaHaidButton': true,
+        };
+      }
+    }
+
+    // Scenario 2: Lebih dari 15 hari (360 jam)
+    if (totalRecordedHours > maxHaidHours) {
+      int haidDaysVal = 0;
+      if (haidStatus == 'Baru Mengalami') {
+        haidDaysVal = 15;
+      } else if (haidStatus == 'Sudah Biasa' && kebiasaanHaid > 0) {
+        haidDaysVal = kebiasaanHaid;
+      } else {
+        haidDaysVal = 15;
+      }
+
       return {
-        'status': 'HAID SEMENTARA',
-        'type': 'HAID_ACTIVE',
-        'haidDays': loggedDays,
-        'istihadahDays': 0,
-        'predictionDays': loggedDays,
+        'status': 'ISTIHADAH LEBIH 15 HARI',
+        'type': haidDaysVal > 0 ? 'HAID' : 'ISTIHADAH_LONG',
+        'haidDays': haidDaysVal,
+        'istihadahDays': totalDurationDays - haidDaysVal,
+        'predictionDays': haidDaysVal,
+        'message': 'Total pencatatan $totalRecordedHours jam terhitung istihadah karena lebih dari maksimal masa haid, Silahkan baca dalilnya melalui tombol berikut',
+        'showMasaHaidButton': true,
       };
     }
 
-    // Default fallback (still recording, less than 24 hours within 15 days)
+    // Scenario 3: Ongoing dan masih dalam batas 15 hari dan >= 24 jam
+    if (record.endDate == null) {
+      final elapsedDays = totalRecordedHours ~/ 24;
+      return {
+        'status': 'HAID SEMENTARA',
+        'type': 'HAID_ACTIVE',
+        'haidDays': elapsedDays,
+        'istihadahDays': 0,
+        'predictionDays': elapsedDays,
+      };
+    }
+
+    // Scenario 4: Selesai, >= 24 jam dan <= 15 hari (360 jam)
+    final totalDays = totalRecordedHours ~/ 24;
+    final remainingHours = totalRecordedHours % 24;
+    final statusStr = remainingHours > 0
+        ? 'HAID SELAMA $totalDays HARI $remainingHours JAM'
+        : 'HAID SELAMA $totalDays HARI';
+
     return {
-      'status': 'HAID SEMENTARA',
-      'type': 'HAID_ACTIVE',
-      'haidDays': 0,
-      'istihadahDays': totalDurationDays,
-      'predictionDays': 0,
-      'message': 'Catat terus untuk status haid yang valid',
+      'status': statusStr,
+      'type': 'HAID',
+      'haidDays': totalDurationDays, // Color all days in calendar red
+      'istihadahDays': 0,
+      'predictionDays': totalDays,
+      'message': 'total pencatatan $totalRecordedHours jam terhitung haid selama $totalDays hari $remainingHours jam, silahkan baca dalilnya melalui tombol berikut',
+      'showMasaHaidButton': true,
     };
   }
 
@@ -155,74 +226,15 @@ class FikihService {
 
       if (record.endDate == null) {
         if (checkDate.isAtSameMomentAs(start) || checkDate.isAfter(start)) {
-          // For active records, use _getFinalStatus logic adapted for ongoing
-          final totalDurationDays =
-              checkDate.difference(start).inDays + 1;
-          final loggedHours = record.bloodEvents.length;
-
-          const int minHaidHours = 24;
-          const int maxHaidDays = 15;
-
-          final is24HoursOrMore = loggedHours >= minHaidHours;
-          final exceeds15Days = totalDurationDays > maxHaidDays;
-
-          // Active cycle exceeding 15 days
-          if (exceeds15Days) {
-            if (haidStatus == 'Baru Mengalami') {
-              return {
-                'status': 'HAID SELAMA 15 HARI',
-                'type': 'HAID',
-                'haidDays': 15,
-                'istihadahDays': totalDurationDays - 15,
-                'predictionDays': 15,
-                'message':
-                    "karena ini adalah haid pertama anda maka sesuai hukum syari'at haid anda adalah 15 hari selebihnya istihadah",
-              };
-            } else if (haidStatus == 'Sudah Biasa' && kebiasaanHaid > 0) {
-              return {
-                'status': 'HAID SELAMA $kebiasaanHaid HARI',
-                'type': 'HAID',
-                'haidDays': kebiasaanHaid,
-                'istihadahDays': totalDurationDays - kebiasaanHaid,
-                'predictionDays': kebiasaanHaid,
-                'message':
-                    '$kebiasaanHaid hari haid mengikuti kebiasaan haid yang anda inputkan, selebihnya istihadah',
-              };
-            } else {
-              return {
-                'status': 'ISTIHADAH LEBIH DARI 15 HARI',
-                'type': 'ISTIHADAH_LONG',
-                'haidDays': 0,
-                'istihadahDays': totalDurationDays,
-                'predictionDays': 0,
-                'message':
-                    'Karena lebih dari 15 hari maka haid anda tergantung status mustahadahnya. Silahkan baca materi tentang mustahadah',
-              };
-            }
+          final today = DateTime.now();
+          final todayMidnight = DateTime(today.year, today.month, today.day);
+          
+          // Jika checkDate melebihi hari ini, jangan diwarnai di kalender (belum terjadi)
+          if (checkDate.isAfter(todayMidnight)) {
+            continue;
           }
 
-          // Active haid (within 15 days and 24+ hours)
-          if (is24HoursOrMore) {
-            final loggedDays = (loggedHours / 24).ceil();
-            return {
-              'status': 'HAID SEMENTARA',
-              'type': 'HAID_ACTIVE',
-              'haidDays': loggedDays,
-              'istihadahDays': 0,
-              'predictionDays': loggedDays,
-            };
-          }
-
-          // Active within 15 days but less than 24 hours
-          return {
-            'status': 'HAID SEMENTARA',
-            'type': 'HAID_ACTIVE',
-            'haidDays': 0,
-            'istihadahDays': totalDurationDays,
-            'predictionDays': 0,
-            'message':
-                'Catat terus minimal 24 jam untuk status haid yang valid',
-          };
+          return _getFinalStatus(record, haidStatus: haidStatus, kebiasaanHaid: kebiasaanHaid);
         }
       } else {
         final end = DateTime(

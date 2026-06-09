@@ -11,6 +11,8 @@ import 'wirid_and_dua_page.dart';
 import 'materi_page.dart';
 import 'faq_page.dart';
 import 'six_records_form.dart';
+import 'hukum_haid_terputus_page.dart';
+import 'masa_keluarnya_darah_haid_page.dart';
 
 final FikihService fikihService = FikihService();
 final HaidService haidService = HaidService();
@@ -75,8 +77,8 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
         if (completed.isNotEmpty) {
           completed.sort((a, b) => b.endDate!.compareTo(a.endDate!));
           final lastRecord = completed.first;
-          final totalDurationDays = lastRecord.endDate!.difference(lastRecord.startDate).inDays + 1;
-          final kebiasaanVal = totalDurationDays.clamp(1, 15);
+          final totalHours = lastRecord.endDate!.difference(lastRecord.startDate).inHours;
+          final kebiasaanVal = (totalHours ~/ 24).clamp(1, 15);
 
           await prefs.setString('haid_status', 'Sudah Biasa');
           await prefs.setInt('kebiasaan_haid', kebiasaanVal);
@@ -320,6 +322,7 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
     try {
       // Catat tanggal mulai Haid (Memulai siklus)
       await haidService.startHaid(selectedDateTime);
+      await haidService.logBloodEvent(selectedDateTime, 'START');
 
       // Schedule daily recording reminder
       await NotificationService().scheduleDailyRecordingReminder();
@@ -346,44 +349,7 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
     }
   }
 
-// 2. Fungsi untuk MENCATAT DARAH HARIAN/JAM-AN (Log Event)
-  Future<void> _logBloodEvent() async {
-    if (_isLoading) return;
 
-    final selectedDateTime = await _selectDateAndTime(
-      context,
-      'Waktu Pencatatan Darah Saat Ini',
-      allowFuture: true,
-    );
-    if (selectedDateTime == null) return;
-
-    setState(() => _isLoading = true);
-
-    try {
-      // ASUMSI: Method ini ada di HaidService untuk log event
-      await haidService.logBloodEvent(selectedDateTime, 'CONTINUE_FLOW');
-
-      await _loadCurrentRecord();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Pencatatan darah harian/jam berhasil disimpan.')),
-        );
-      }
-    } catch (e) {
-      debugPrint("Error saat mencatat status darah: $e");
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('Gagal mencatat status darah: ${e.toString()}')),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
 
 // 3. Fungsi untuk MENGAKHIRI SIKLUS (Memicu Perhitungan Fiqh Final)
   Future<void> _endHaidFinal() async {
@@ -403,13 +369,14 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
       final activeRecord = _currentRecord;
 
       // Panggil service untuk END FINAL (ini akan mengisi endDate dan memicu kalkulasi)
+      await haidService.logBloodEvent(selectedDateTime, 'END');
       await haidService.endHaidFinal(selectedDateTime);
 
       if (wasBaruMengalami && activeRecord != null) {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('haid_status', 'Sudah Biasa');
-        final totalDurationDays = selectedDateTime.difference(activeRecord.startDate).inDays + 1;
-        final kebiasaanVal = totalDurationDays.clamp(1, 15);
+        final totalHours = selectedDateTime.difference(activeRecord.startDate).inHours;
+        final kebiasaanVal = (totalHours ~/ 24).clamp(1, 15);
         await prefs.setInt('kebiasaan_haid', kebiasaanVal);
       }
 
@@ -612,29 +579,110 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                       if (!_isLoading)
                         Builder(
                           builder: (context) {
-                            final statusDetail =
-                                fikihService.getDetailedHukumStatus(
-                                    DateTime.now(), _allRecords, haidStatus: _haidStatus, kebiasaanHaid: _kebiasaanHaid);
+                            HaidRecord? relevantRecord;
+                            if (_currentRecord != null) {
+                              relevantRecord = _currentRecord;
+                            } else if (_allRecords.isNotEmpty) {
+                              relevantRecord = _allRecords.first;
+                            }
+
+                            if (relevantRecord == null) {
+                              return const SizedBox.shrink();
+                            }
+
+                            final statusDetail = fikihService.getDetailedHukumStatus(
+                                relevantRecord.endDate ?? DateTime.now(),
+                                _allRecords,
+                                haidStatus: _haidStatus,
+                                kebiasaanHaid: _kebiasaanHaid);
                             final message = statusDetail['message'] as String?;
-                            if (message != null && message.isNotEmpty) {
-                              return Container(
-                                padding: const EdgeInsets.all(12),
-                                margin: const EdgeInsets.only(top: 8),
-                                decoration: BoxDecoration(
-                                  color: Colors.amber.shade100,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                      color: Colors.amber.shade300, width: 1),
-                                ),
-                                child: Text(
-                                  message,
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    color: Colors.black87,
-                                    fontStyle: FontStyle.italic,
-                                  ),
-                                ),
+                            final showButton = statusDetail['showInterruptedHaidButton'] == true;
+                            final showMasaHaidButton = statusDetail['showMasaHaidButton'] == true;
+
+                            if ((message != null && message.isNotEmpty) || showButton || showMasaHaidButton) {
+                              return Column(
+                                children: [
+                                  if (message != null && message.isNotEmpty)
+                                    Container(
+                                      padding: const EdgeInsets.all(12),
+                                      margin: const EdgeInsets.only(top: 8),
+                                      decoration: BoxDecoration(
+                                        color: Colors.amber.shade100,
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                            color: Colors.amber.shade300, width: 1),
+                                      ),
+                                      child: Text(
+                                        message,
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          color: Colors.black87,
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                      ),
+                                    ),
+                                  if (showButton) ...[
+                                    const SizedBox(height: 12),
+                                    ElevatedButton.icon(
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => const HukumHaidTerputusPage(),
+                                          ),
+                                        );
+                                      },
+                                      icon: const Icon(Icons.menu_book, color: Colors.white, size: 20),
+                                      label: const Text(
+                                        'Hukum Haid Yang Terputus',
+                                        style: TextStyle(
+                                          fontFamily: 'Poppins',
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: secondaryColor,
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                  if (showMasaHaidButton) ...[
+                                    const SizedBox(height: 12),
+                                    ElevatedButton.icon(
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => const MasaKeluarnyaDarahHaidPage(),
+                                          ),
+                                        );
+                                      },
+                                      icon: const Icon(Icons.menu_book, color: Colors.white, size: 20),
+                                      label: const Text(
+                                        'Masa Keluarnya Darah Haid',
+                                        style: TextStyle(
+                                          fontFamily: 'Poppins',
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: secondaryColor,
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               );
                             }
                             return const SizedBox.shrink();
@@ -669,50 +717,28 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                   )
                 else if (isHaidActive)
                   // KONDISI 1: Siklus sedang aktif (HAID SEMENTARA)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      // Tombol 1A: Mencatat Darah Masih Keluar (Event Harian)
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: _logBloodEvent, // PANGGIL FUNGSI LOG EVENT
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: primaryColor,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(15)),
-                            elevation: 3,
-                          ),
-                          child: const Text(
-                            'Catat darah hari/jam ini',
-                            style: TextStyle(
-                                fontSize: 15, fontWeight: FontWeight.bold),
-                          ),
+                  ElevatedButton(
+                    onPressed: _endHaidFinal, // PANGGIL FUNGSI END FINAL
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(15)),
+                      elevation: 5,
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.stop),
+                        SizedBox(width: 8),
+                        Text(
+                          'AKHIRI HAID',
+                          style: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold),
                         ),
-                      ),
-                      const SizedBox(width: 10),
-
-                      // Tombol 1B: Akhir Final (Memicu Perhitungan Fiqh)
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: _endHaidFinal, // PANGGIL FUNGSI END FINAL
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: primaryColor,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(15)),
-                            elevation: 5,
-                          ),
-                          child: const Text(
-                            'Akhiri haid',
-                            style: TextStyle(
-                                fontSize: 15, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   )
                 else
                   // KONDISI 2: Siklus tidak aktif atau sudah selesai
@@ -971,8 +997,9 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                               ? '${record.endDate!.day}/${record.endDate!.month}/${record.endDate!.year}'
                               : 'Sedang berlangsung';
 
-                          // Calculate duration and progress based on logged blood events
-                          final loggedHours = record.bloodEvents.length;
+                          // Calculate duration and progress based on hours
+                          final endDateTime = record.endDate ?? DateTime.now();
+                          final loggedHours = endDateTime.difference(record.startDate).inHours;
                           final progressPercentage =
                               (loggedHours / 24.0).clamp(0.0, 1.0);
 
@@ -980,6 +1007,7 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                           Color progressColor;
                           List<Color> gradientColors;
                           double actualProgressPercentage = progressPercentage;
+                          String statusText;
 
                           if (record.endDate != null) {
                             // Completed cycle - get detailed status
@@ -987,10 +1015,7 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                                 fikihService.getDetailedHukumStatus(
                                     record.endDate!, _allRecords, haidStatus: _haidStatus, kebiasaanHaid: _kebiasaanHaid);
                             final statusType = statusDetail['type'] as String;
-                            final totalDays = record.endDate!
-                                    .difference(record.startDate)
-                                    .inDays +
-                                1;
+                            statusText = statusDetail['status'] as String? ?? 'SUCI';
 
                             if (statusType == 'HAID') {
                               // Scenario 1: All days are haid - solid green
@@ -1012,6 +1037,7 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                             final statusDetail = fikihService
                                 .getDetailedHukumStatus(today, _allRecords, haidStatus: _haidStatus, kebiasaanHaid: _kebiasaanHaid);
                             final statusType = statusDetail['type'] as String;
+                            statusText = statusDetail['status'] as String? ?? 'HAID SEMENTARA';
 
                             if (statusType == 'HAID_ACTIVE') {
                               // Active haid within 15 days and 24+ hours - orange to red gradient
@@ -1146,107 +1172,135 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                                         ),
                                       ],
                                     ),
-                                    const SizedBox(height: 4),
+                                    const SizedBox(height: 8),
                                     Text(
-                                      'Durasi: $loggedHours jam tercatat (Target Minimal Dalam 1 Haid: 24 Jam)',
+                                      'Durasi: $loggedHours jam tercatat',
                                       style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey.shade600,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                        color: Colors.grey.shade700,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      'Status Periode ini : $statusText',
+                                     ),
+                                     Builder(
+                                       builder: (context) {
+                                         final statusDetail = fikihService.getDetailedHukumStatus(
+                                             record.endDate ?? DateTime.now(),
+                                             _allRecords,
+                                             haidStatus: _haidStatus,
+                                             kebiasaanHaid: _kebiasaanHaid);
+                                         final message = statusDetail['message'] as String?;
+                                         final showButton = statusDetail['showInterruptedHaidButton'] == true;
+                                         final showMasaHaidButton = statusDetail['showMasaHaidButton'] == true;
+
+                                         if ((message != null && message.isNotEmpty) || showButton || showMasaHaidButton) {
+                                           return Column(
+                                             crossAxisAlignment: CrossAxisAlignment.start,
+                                             children: [
+                                               if (message != null && message.isNotEmpty)
+                                                 Container(
+                                                   width: double.infinity,
+                                                   padding: const EdgeInsets.all(10),
+                                                   margin: const EdgeInsets.only(top: 8),
+                                                   decoration: BoxDecoration(
+                                                     color: Colors.amber.shade50,
+                                                     borderRadius: BorderRadius.circular(10),
+                                                     border: Border.all(
+                                                         color: Colors.amber.shade200, width: 1),
+                                                   ),
+                                                   child: Text(
+                                                     message,
+                                                     style: const TextStyle(
+                                                       fontSize: 12,
+                                                       color: Colors.black87,
+                                                       fontStyle: FontStyle.italic,
+                                                     ),
+                                                   ),
+                                                 ),
+                                               if (showButton) ...[
+                                                 const SizedBox(height: 8),
+                                                 SizedBox(
+                                                   width: double.infinity,
+                                                   child: ElevatedButton.icon(
+                                                     onPressed: () {
+                                                       Navigator.push(
+                                                         context,
+                                                         MaterialPageRoute(
+                                                           builder: (context) => const HukumHaidTerputusPage(),
+                                                         ),
+                                                       );
+                                                     },
+                                                     icon: const Icon(Icons.menu_book, color: Colors.white, size: 16),
+                                                     label: const Text(
+                                                       'Hukum Haid Yang Terputus',
+                                                       style: TextStyle(
+                                                         fontFamily: 'Poppins',
+                                                         fontWeight: FontWeight.bold,
+                                                         fontSize: 12,
+                                                       ),
+                                                     ),
+                                                     style: ElevatedButton.styleFrom(
+                                                       backgroundColor: secondaryColor,
+                                                       foregroundColor: Colors.white,
+                                                       padding: const EdgeInsets.symmetric(vertical: 8),
+                                                       shape: RoundedRectangleBorder(
+                                                         borderRadius: BorderRadius.circular(10),
+                                                       ),
+                                                     ),
+                                                   ),
+                                                 ),
+                                               ],
+                                               if (showMasaHaidButton) ...[
+                                                 const SizedBox(height: 8),
+                                                 SizedBox(
+                                                   width: double.infinity,
+                                                   child: ElevatedButton.icon(
+                                                     onPressed: () {
+                                                       Navigator.push(
+                                                         context,
+                                                         MaterialPageRoute(
+                                                           builder: (context) => const MasaKeluarnyaDarahHaidPage(),
+                                                         ),
+                                                       );
+                                                     },
+                                                     icon: const Icon(Icons.menu_book, color: Colors.white, size: 16),
+                                                     label: const Text(
+                                                       'Masa Keluarnya Darah Haid',
+                                                       style: TextStyle(
+                                                         fontFamily: 'Poppins',
+                                                         fontWeight: FontWeight.bold,
+                                                         fontSize: 12,
+                                                       ),
+                                                     ),
+                                                     style: ElevatedButton.styleFrom(
+                                                       backgroundColor: secondaryColor,
+                                                       foregroundColor: Colors.white,
+                                                       padding: const EdgeInsets.symmetric(vertical: 8),
+                                                       shape: RoundedRectangleBorder(
+                                                         borderRadius: BorderRadius.circular(10),
+                                                       ),
+                                                     ),
+                                                   ),
+                                                 ),
+                                               ],
+                                             ],
+                                           );
+                                         }
+                                         return const SizedBox.shrink();
+                                       },
+                                     ),
+                                     Text(
+                                       '',
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: primaryColor,
                                       ),
                                     ),
                                   ],
-                                ),
-                                const SizedBox(height: 12),
-                                // Scrollable container for blood events (max 4 recent)
-                                Container(
-                                  height:
-                                      120, // Fixed height for scrollable area
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey.shade50,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                        color: Colors.grey.withOpacity(0.3),
-                                        width: 1),
-                                  ),
-                                  child: SingleChildScrollView(
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(8.0),
-                                      child: Column(
-                                        children: record.bloodEvents.reversed
-                                            .take(4)
-                                            .map((event) {
-                                          final eventTime =
-                                              '${event.timestamp.day}/${event.timestamp.month}/${event.timestamp.year} ${event.timestamp.hour}:${event.timestamp.minute.toString().padLeft(2, '0')}';
-                                          return Padding(
-                                            padding: const EdgeInsets.only(
-                                                bottom: 4.0),
-                                            child: Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment
-                                                      .spaceBetween,
-                                              children: [
-                                                Expanded(
-                                                  child: Text(
-                                                    '$eventTime - ${event.type}',
-                                                    style: const TextStyle(
-                                                      fontSize: 14,
-                                                      color: textColor,
-                                                    ),
-                                                  ),
-                                                ),
-                                                IconButton(
-                                                  icon: const Icon(Icons.delete,
-                                                      size: 16,
-                                                      color: primaryColor),
-                                                  onPressed: () async {
-                                                    final confirm =
-                                                        await showDialog<bool>(
-                                                      context: context,
-                                                      builder: (context) =>
-                                                          AlertDialog(
-                                                        title: const Text(
-                                                            'Hapus Pencatatan'),
-                                                        content: const Text(
-                                                            'Apakah Anda yakin ingin menghapus pencatatan darah ini?'),
-                                                        actions: [
-                                                          TextButton(
-                                                            onPressed: () =>
-                                                                Navigator.of(
-                                                                        context)
-                                                                    .pop(false),
-                                                            child: const Text(
-                                                                'Batal'),
-                                                          ),
-                                                          TextButton(
-                                                            onPressed: () =>
-                                                                Navigator.of(
-                                                                        context)
-                                                                    .pop(true),
-                                                            child: const Text(
-                                                                'Hapus'),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    );
-                                                    if (confirm == true) {
-                                                      final eventIndex = record
-                                                          .bloodEvents
-                                                          .indexOf(event);
-                                                      await haidService
-                                                          .deleteBloodEvent(
-                                                              record,
-                                                              eventIndex);
-                                                      await _loadCurrentRecord();
-                                                    }
-                                                  },
-                                                ),
-                                              ],
-                                            ),
-                                          );
-                                        }).toList(),
-                                      ),
-                                    ),
-                                  ),
                                 ),
                               ],
                             ),

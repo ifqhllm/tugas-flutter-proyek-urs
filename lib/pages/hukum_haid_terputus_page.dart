@@ -3,18 +3,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../constants/colors.dart';
 
-class MasaKeluarnyaDarahHaidPage extends StatefulWidget {
+class HukumHaidTerputusPage extends StatefulWidget {
   final int materialNumber;
 
-  const MasaKeluarnyaDarahHaidPage({super.key, this.materialNumber = 6});
+  const HukumHaidTerputusPage({super.key, this.materialNumber = 25});
 
   @override
-  State<MasaKeluarnyaDarahHaidPage> createState() =>
-      _MasaKeluarnyaDarahHaidPageState();
+  State<HukumHaidTerputusPage> createState() => _HukumHaidTerputusPageState();
 }
 
-class _MasaKeluarnyaDarahHaidPageState
-    extends State<MasaKeluarnyaDarahHaidPage> {
+class _HukumHaidTerputusPageState extends State<HukumHaidTerputusPage> {
   bool _isBookmarked = false;
   bool _isLoading = true;
 
@@ -26,16 +24,16 @@ class _MasaKeluarnyaDarahHaidPageState
 
   Future<void> _loadBookmark() async {
     final prefs = await SharedPreferences.getInstance();
-    final savedHaid = prefs.getStringList('bookmarked_haid') ?? [];
+    final savedIstihadah = prefs.getStringList('bookmarked_istihadah') ?? [];
     setState(() {
-      _isBookmarked = savedHaid.contains(widget.materialNumber.toString());
+      _isBookmarked = savedIstihadah.contains(widget.materialNumber.toString());
       _isLoading = false;
     });
   }
 
   Future<void> _toggleBookmark() async {
     final prefs = await SharedPreferences.getInstance();
-    final savedHaid = prefs.getStringList('bookmarked_haid') ?? [];
+    final savedIstihadah = prefs.getStringList('bookmarked_istihadah') ?? [];
     final materialStr = widget.materialNumber.toString();
 
     setState(() {
@@ -43,14 +41,14 @@ class _MasaKeluarnyaDarahHaidPageState
     });
 
     if (_isBookmarked) {
-      if (!savedHaid.contains(materialStr)) {
-        savedHaid.add(materialStr);
+      if (!savedIstihadah.contains(materialStr)) {
+        savedIstihadah.add(materialStr);
       }
     } else {
-      savedHaid.remove(materialStr);
+      savedIstihadah.remove(materialStr);
     }
 
-    await prefs.setStringList('bookmarked_haid', savedHaid);
+    await prefs.setStringList('bookmarked_istihadah', savedIstihadah);
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -107,7 +105,7 @@ class _MasaKeluarnyaDarahHaidPageState
           ),
           const Expanded(
             child: Text(
-              'Masa Keluarnya Darah Haid',
+              'Hukum Haid yang Terputus',
               style: TextStyle(
                 color: Colors.black87,
                 fontSize: 18,
@@ -127,40 +125,62 @@ class _MasaKeluarnyaDarahHaidPageState
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 8),
           _buildContentBox(
-            text: 'Salah satu persoalan yang rumit bagi wanita adalah persoalan tentang haid/menstruasi. Wanita yang sedang menstruasi harus benar-benar berhati-hati dalam menentukan darahnya, sebab bisa jadi darah yang keluar tidak berupa haid, namun istihadhah ataupun sebaliknya. Dua darah inilah yang paling sering keluar dari kemaluan wanita. Ketika sedang haid, wanita tidak diperkenankan untuk mengerjakan ibadah-ibadah yang diperbolehkan bagi wanita yang tidak haid, seperti shalat, puasa, menyentuh dan membawa Al-Qur’an, thawaf, termasuk juga berhubungan badan dengan suami. Sedangkan wanita yang sedang istihadhah hukumnya sama seperti wanita pada umumnya. Ia tetap diwajibkan shalat, puasa, boleh menyentuh, membawa, dan membaca Al-Qur’an, dan lainnya. Berkaitan dengan hal ini, Allah swt melarang semua manusia untuk menjauhi (tidak berinteraksi) wanita yang sedang haid hingga mereka bersuci dari hadats besarnya tersebut. Dalam Al-Qur’an Allah berfirman:',
+            text: 'Hukum haid yang terputus-putus (misalnya: keluar 3 hari, berhenti 2 hari, lalu keluar lagi) secara fikih dikategorikan sebagai darah haid. Selama rentang waktu keluarnya darah dan masa berhentinya (jika ditotal) tidak melebihi kebiasaan haid atau batas maksimal haid yaitu 15 hari, wanita tersebut dihukumi sedang haid sehingga wajib meninggalkan shalat dan puasa.',
           ),
-          const SizedBox(height: 12),
-          _buildArabicContentBox(
-            arabicText: 'وَيَسْأَلُونَكَ عَنِ الْمَحِيضِ ۖ قُلْ هُوَ أَذًى فَاعْتَزِلُوا النِّسَاءَ فِي الْمَحِيضِ ۖ وَلَا تَقْرَبُوهُنَّ حَتَّىٰ يَطْهُرْنَ ۖ فَإِذَا تَطَهَّرْنَ فَأْتُوهُنَّ مِنْ حَيْثُ أَمَرَكُمُ اللَّهُ ۚ إِنَّ اللَّهَ يُحِبُّ التَّوَّابِينَ وَيُحِبُّ الْمُتَطَهِّرِينَ',
-            translationText: 'Artinya, “Mereka menanyakan kepadamu (Muhammad) tentang haid. Katakanlah, ‘Itu adalah sesuatu yang kotor.’ Karena itu, jauhilah istri pada waktu haid; dan jangan kamu dekati mereka sebelum mereka suci. Apabila mereka telah suci, campurilah mereka sesuai dengan (ketentuan) yang diperintahkan Allah kepadamu. Sungguh, Allah menyukai orang yang tobat dan menyukai orang yang menyucikan diri.” (QS Al-Baqarah [2]: 222).',
-          ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
+          _buildSectionHeader('1. Landasan Hukum dan Prinsip Fikih'),
+          const SizedBox(height: 8),
           _buildContentBox(
-            text: 'Oleh karena itu, para ulama menciptakan sebuah rumusan yang sangat detail dan rinci perihal ketentuan haid, mulai dari ketentuan darah, masa, dan sifat-sifatnya. Misalnya, ulama kalangan mazhab Syafi’iyah merumuskan bahwa paling sedikitnya darah haid adalah 24 jam atau satu hari satu malam jika darah keluar terus-menerus. Umumnya adalah 6 hingga 7 hari, dan paling banyaknya yaitu 15 hari. Rumusan-rumusan para ulama perihal waktu dan masa haid tersebut, sebagaimana dijelaskan oleh Imam ar-Rafi’i (wafat 623 H) dalam salah satu karyanya, berasal dari hasil observasi (istiqra’) para ulama kepada wanita-wanita di masa itu tentang kebiasaan haidnya. Para ulama berkelana untuk bertanya perihal kebiasaan wanita yang mengalami pendarahan, dengan tujuan untuk menarik sebuah konklusi hukum yang universal tentang darah haid. Setelah melakukan observasi tentang kebiasaan wanita selama mengalami pendarahan, maka muncullah rumusan haid sebagaimana yang telah diterapkan dan ditetapkan hingga saat ini. Nah, ini kemudian dikenal dengan istilah istiqra’,',
+            text: '• Batas Maksimal Haid: Jumhur ulama (termasuk Mazhab Syafi\'i) menetapkan batas maksimal masa haid adalah 15 hari.\n\n'
+                '• Masa Suci di Antara Dua Darah: Para ulama berbeda pendapat mengenai masa berhentinya darah. Namun, pendapat yang kuat (rajih) dari Mazhab Syafi\'i dan Hanafi menyatakan bahwa masa putus atau jeda tersebut masih terhitung sebagai masa haid, selama total durasi haid dan masa bersih tidak melebihi 15 hari.\n\n'
+                '• Darah Istihadhah (Penyakit): Jika darah terus mengalir melewati batas maksimal 15 hari, atau masa putusnya darah justru terjadi terus-menerus di luar siklus kebiasaan, maka darah tersebut dihukumi sebagai darah istihadhah.',
           ),
-          const SizedBox(height: 12),
-          _buildArabicContentBox(
-            arabicText: 'ومستند هذه التقديرات الوجود المعلوم بالاستقراء يعني ما ذكرنا ان المتبع في سن الحيض والاقل والاكثر ما وجد dari عادات النساء بعد البحث الشافي فاعتمدنا ذلك واتبعناه',
-            translationText: 'Artinya, “Adapun landasan ketentuan ini (ketentuan masa haid) yaitu berdasarkan keberadaan yang sudah diketahui dengan cara observasi. Maksudnya, apa yang telah dijelaskan (tentang masa haid) bahwa yang diikuti dalam menentukan masa haid, mulai dari paling sedikit hingga paling banyaknya, itu adalah apa yang telah ditemukan dari kebiasaan-kebiasaan wanita setelah pembahasan yang pasti, kemudian (kebiasaan itu) kami jadikan pedoman dan kami ikuti.” (Imam ar-Rafi’i, Fathul Aziz bi Syarhil Wajiz, [Beirut, Darul Fikr: tt], juz II, halaman 414).',
-          ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
+          _buildSectionHeader('2. Panduan Praktis dan Tata Cara Ibadah'),
+          const SizedBox(height: 8),
           _buildContentBox(
-            text: 'Dengan rumusan ini, para ulama mazhab Syafi’iyah kemudian menyimpulkan bahwa jika ada wanita yang mengalami pendarahan kurang dari 24 jam, atau lebih banyak dari 15 hari, maka sudah dipastikan bahwa darah tersebut bukanlah darah haid, akan tetapi istihadhah, sehingga semua kewajiban ibadahnya harus tetap ia lakukan. Imam Abdurrahman Jalaluddin as-Suyuthi (wafat 911 H) dalam salah satu karyanya menjelaskan bahwa rumusan ulama mazhab Syafi’iyah perihal metodologi penentuan masa, waktu, umur wanita haid yang berdasarkan istiqra’ di atas adalah berlandaskan salah satu kaidah fiqih, bahwa adah (kebiasaan) bisa dijadikan patokan dalam menentukan suatu hukum (al-‘adah muhakkamah). Kaidah fiqih tentang kebolehan menjadikan adat sebagai pijakan hukum di atas, berdasarkan salah satu perkataan Ibnu Mas’ud, bahwa apa saja yang dinilai baik oleh umat Islam, maka Allah juga menilainya sebagai kebaikan,',
+            text: 'Untuk menentukan apakah Anda wajib mandi besar (bersuci) saat darah berhenti sementara atau tidak, Anda dapat mengkategorikannya berdasarkan kondisi Anda:\n\n'
+                '• Masa Jeda Sangat Singkat (Kurang dari Sehari): Jika darah berhenti hanya sebentar (kurang dari 24 jam), ulama seperti dalam kitab Al-Mughni menyebutkan bahwa masa ini tidak dianggap sebagai keadaan suci. Anda tidak perlu mandi wajib dan belum boleh shalat, karena kemungkinan darah akan keluar kembali.\n\n'
+                '• Masa Jeda Cukup Panjang (Lebih dari 24 Jam): Jika darah berhenti cukup lama (lebih dari 1 hari 1 malam) dan Anda melihat tanda-tanda suci (misalnya: cairan putih bening atau area kewanitaan benar-benar kering), mayoritas ulama membolehkan Anda untuk mandi besar, shalat, dan puasa. Jika nanti darah keluar lagi, hentikan shalat dan hitung kembali sebagai satu siklus.',
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
+          _buildSectionHeader('Redaksi Kitab (Teks Arab & Terjemahan)'),
+          const SizedBox(height: 8),
           _buildArabicContentBox(
-            arabicText: 'مَا رَآهُ الْمُسْلِمُونَ حَسَنًا فَهُوَ عِنْدَ اللَّهِ حَسَنٌ',
-            translationText: 'Artinya, “Apa saja yang dinilai baik oleh umat Islam, maka di sisi Allah juga bernilai baik.” (Imam as-Suyuthi, al-Asybah wan Nazhair, [Beirut, Darul Kutub Ilmiah: 1990], juz I, halaman 128).',
+            arabicText: '(وَمَا نَقَصَ) مِنْ دَمٍ أَوْ طُهْرٍ (عَنْ أَقَلِّهِ) كَمَا لَوْ رَأَتْ فِي يَوْمٍ دَمًا وَفِي يَوْمٍ طُهْرًا وَفِي يَوْمٍ دَمًا (فَالصَّحِيحُ أَنَّهُ لَيْسَ بِحَيْضٍ)',
+            translationText: 'Terjemahannya:\n"Dan darah atau masa suci yang kurang dari batas minimalnya—seperti seorang wanita yang mengeluarkan darah pada suatu hari, lalu suci di hari berikutnya, kemudian mengeluarkan darah lagi di hari berikutnya—maka menurut pendapat yang paling shahih (kuat) itu bukanlah haid."\n\n(Catatan: Maksudnya jika darah pertama kurang dari sehari semalam atau putusnya tidak memenuhi syarat haid).',
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
+          _buildSectionHeader('Contoh Penerapan (Siklus Haid Terputus)'),
+          const SizedBox(height: 8),
           _buildContentBox(
-            text: 'Demikian penjelasan perihal darah haid dan dasar istiqra’ dalam menentukan darah. Semoga bermanfaat. Wallahu a’lam.',
+            text: 'Berdasarkan rumusan syarah pada halaman tersebut:\n\n'
+                '• Hari 1-4: Keluar darah haid.\n'
+                '• Hari 5-7: Darah berhenti (masa jeda/suci).\n'
+                '• Hari 8-12: Darah keluar kembali.\n\n'
+                'Kesimpulan Hukum:\nMaka dari tanggal 1 hingga 12 dianggap keseluruhannya sebagai masa haid dan dihukumi suci (tidak perlu mengqadha shalat) pada hari kelima hingga ketujuh. Namun, jika akumulasi hari darah dan jeda suci melebihi 15 hari, maka darah yang keluar pada hari ke-16 dan seterusnya dihukumi sebagai darah istihadlah (darah penyakit).',
           ),
           const SizedBox(height: 20),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Text(
+        title,
+        style: const TextStyle(
+          color: secondaryColor,
+          fontSize: 15,
+          fontWeight: FontWeight.bold,
+          fontFamily: 'Poppins',
+        ),
       ),
     );
   }
@@ -193,8 +213,7 @@ class _MasaKeluarnyaDarahHaidPageState
     );
   }
 
-  Widget _buildArabicContentBox(
-      {required String arabicText, required String translationText}) {
+  Widget _buildArabicContentBox({required String arabicText, required String translationText}) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -217,7 +236,7 @@ class _MasaKeluarnyaDarahHaidPageState
             style: const TextStyle(
               color: Colors.black87,
               fontSize: 18,
-              fontFamily: 'Amiri',
+              fontFamily: 'Amiri', // Traditional Arabic Font style
               height: 1.6,
             ),
             textAlign: TextAlign.right,
@@ -256,8 +275,7 @@ class _MasaKeluarnyaDarahHaidPageState
         color: Colors.transparent,
         child: InkWell(
           onTap: () async {
-            final Uri url = Uri.parse(
-                'https://nu.or.id/syariah/fiqih-wanita-darah-haid-dan-dasar-istiqra-zsi9n');
+            final Uri url = Uri.parse('https://online.fliphtml5.com/uscyg/sqqc/');
             try {
               if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
                 throw Exception('Could not launch $url');
@@ -286,7 +304,7 @@ class _MasaKeluarnyaDarahHaidPageState
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Referensi Selengkapnya:',
+                        'Referensi Kitab:',
                         style: TextStyle(
                           color: Color(0xFF8B4513),
                           fontSize: 12,
@@ -296,7 +314,7 @@ class _MasaKeluarnyaDarahHaidPageState
                       ),
                       SizedBox(height: 2),
                       Text(
-                        'Artikel NU Online: Fiqh Wanita, Darah Haid, dan Dasar Istiqra',
+                        'Kitab Mughni al-Muhtaj juz 1',
                         style: TextStyle(
                           color: Color(0xFF8B4513),
                           fontSize: 14,

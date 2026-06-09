@@ -16,6 +16,20 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   bool _recordingReminderEnabled = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _recordingReminderEnabled = prefs.getBool('recording_reminder') ?? true;
+    });
+  }
+
   Future<void> _updateRecordingReminder(bool value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('recording_reminder', value);
@@ -83,6 +97,7 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _changeUserName(BuildContext context) async {
     final TextEditingController controller = TextEditingController();
     final prefs = await SharedPreferences.getInstance();
+    if (!context.mounted) return;
     final current = prefs.getString(userNameKey) ?? 'Pengguna';
     controller.text = current;
 
@@ -447,7 +462,7 @@ class _SettingsPageState extends State<SettingsPage> {
         ],
       ),
     );
-  } }
+  }
 
   @override
   Widget build(BuildContext context) {
