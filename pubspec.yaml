@@ -33,6 +33,7 @@ dev_dependencies:
   hive_generator: ^2.0.1
   build_runner: ^2.4.9
   flutter_launcher_icons: ^0.13.1
+  flutter_native_splash: ^2.4.0
 
 # Konfigurasi Aset Gambar
 flutter:
@@ -47,4 +48,10 @@ flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
   image_path: "assets/images/Logo.png"
- 
+
+flutter_native_splash:
+  background_image: "assets/background.jpg"
+  image: "assets/images/Logo.png"
+  android: true
+  ios: true
+  fullscreen: true

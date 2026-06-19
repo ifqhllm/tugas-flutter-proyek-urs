@@ -349,7 +349,12 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void initState() {
     super.initState();
-    _loadInitialData();
+    _loadInitialDataWithDelay();
+  }
+
+  Future<void> _loadInitialDataWithDelay() async {
+    await Future.delayed(const Duration(milliseconds: 1500));
+    await _loadInitialData();
   }
 
   Future<void> _handleReloadData() async {
