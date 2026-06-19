@@ -20,7 +20,7 @@ class FikihService {
           totalRecordedHours += event.timestamp.difference(currentStart).inHours;
           isFlowing = false;
         }
-      } else if (event.type == 'CONTINUE_FLOW' || event.type == 'START') {
+      } else if (event.type == 'Pencatatan' || event.type == 'START') {
         if (!isFlowing) {
           currentStart = event.timestamp;
           isFlowing = true;
@@ -36,7 +36,7 @@ class FikihService {
       totalRecordedHours = totalSpanHours;
     }
 
-    final hasInterruption = events.any((e) => e.type == 'CONTINUE_FLOW');
+    final hasInterruption = events.any((e) => e.type == 'Pencatatan');
 
     return {
       'totalRecordedHours': totalRecordedHours,
@@ -182,7 +182,7 @@ class FikihService {
   // --- 2. Mendapatkan Status Hukum untuk tanggal tertentu ---
   String getHukumStatus(DateTime date, List<HaidRecord> allRecords, {String haidStatus = 'Sudah Biasa', int kebiasaanHaid = 0}) {
     if (allRecords.isEmpty) {
-      return 'SUCI (Belum ada riwayat)';
+      return 'SUCI';
     }
 
     final checkDate = DateTime(date.year, date.month, date.day);
@@ -215,7 +215,7 @@ class FikihService {
   Map<String, dynamic> getDetailedHukumStatus(
       DateTime date, List<HaidRecord> allRecords, {String haidStatus = 'Sudah Biasa', int kebiasaanHaid = 0}) {
     if (allRecords.isEmpty) {
-      return {'status': 'SUCI (Belum ada riwayat)', 'type': 'SUCI'};
+      return {'status': 'SUCI', 'type': 'SUCI'};
     }
 
     final checkDate = DateTime(date.year, date.month, date.day);

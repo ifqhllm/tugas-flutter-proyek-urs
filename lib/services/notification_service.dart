@@ -5,11 +5,15 @@ import 'package:timezone/data/latest.dart' as tz;
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/haid_record.dart';
+import '../pages/tatacara_bersuci_page.dart';
+import 'fikih_service.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
   NotificationService._internal();
+
+  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
@@ -44,6 +48,13 @@ class NotificationService {
       initializationSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
         debugPrint('Notification tapped with payload: ${response.payload}');
+        if (response.payload == 'bersuci_page') {
+          navigatorKey.currentState?.push(
+            MaterialPageRoute(
+              builder: (context) => const TatacaraBersuciPage(materialNumber: 13),
+            ),
+          );
+        }
       },
     );
 
@@ -56,8 +67,8 @@ class NotificationService {
       await androidPlugin.createNotificationChannel(
         const AndroidNotificationChannel(
           'reminder_channel',
-          'Pengingat Harian',
-          description: 'Pengingat rutin untuk pencatatan harian',
+          'Notifikasi Pengingat',
+          description: 'Notifikasi pengingat untuk siklus haid',
           importance: Importance.high,
           playSound: true,
           enableVibration: true,
@@ -67,177 +78,133 @@ class NotificationService {
     }
   }
 
-
-
-  Future<void> cancelRecordingReminder() async {
-    await flutterLocalNotificationsPlugin.cancel(999999);
+  Future<void> cancelAll() async {
+    await flutterLocalNotificationsPlugin.cancelAll();
   }
 
-
-  Future<void> scheduleDailyRecordingReminder() async {
-    await cancelRecordingReminder();
-
+  Future<void> scheduleAllNotifications() async {
     final prefs = await SharedPreferences.getInstance();
     final notificationsEnabled = prefs.getBool('recording_reminder') ?? true;
-    const int reminderId = 999999;
+
+    // Batalkan semua jadwal sebelumnya terlebih dahulu
+    await cancelAll();
+
+    if (!notificationsEnabled) {
+      debugPrint('All notifications canceled and disabled.');
+      return;
+    }
 
     const String userNameKey = 'user_name';
     final userName = prefs.getString(userNameKey) ?? 'Pengguna';
+    final haidStatus = prefs.getString('haid_status') ?? 'Baru Mengalami';
+    final kebiasaanHaid = prefs.getInt('kebiasaan_haid') ?? 0;
 
-    if (!notificationsEnabled) return;
-
-    // Check if user has started recording (has any records)
-    // Assuming HaidService is accessible, but since it's a service, we need to check records
-    // For simplicity, check if user has completed onboarding (has name)
-    // But better to check if has records. Since we can't access haidService here easily,
-    // we'll assume if notifications are enabled and user has name, they have started.
-    // Actually, let's check if there's any record by trying to get all records count.
-    // But to avoid complexity, for now, just check if user has started by having a flag or records.
-    // Since the task says "jika user sudah mulai mencatat", meaning if user has started recording,
-    // we can check if there are any records. But since this is a service, perhaps add a parameter or check prefs.
-
-    // For now, since the reminder is scheduled when starting haid, and canceled when ending,
-    // but the task wants it only if user has started recording, meaning has at least one record.
-    // Let's add a check: if no records, don't schedule.
-
-    // But to keep it simple, since schedule is called when starting haid, and user has started,
-    // but the task says "jika user sudah mulai mencatat", so perhaps always schedule if enabled,
-    // but the current code already does that. Wait, the task says "jika user sudah mulai mencatat"
-    // meaning if user has started recording, which they have if they have records.
-
-    // Perhaps the reminder should only be scheduled if user has active recording or has records.
-    // But currently it's scheduled when starting haid, and canceled when ending.
-
-    // The task: "muncul notif pengingat pencatatan setiap pukul 5 pagi jika user sudah mulai mencatat"
-    // "if user has started recording"
-
-    // So, perhaps check if there are any records. If no records, don't schedule.
-
-    // To do that, I need to access haidService. But since this is a service, perhaps pass a parameter or check prefs.
-
-    // For simplicity, since the reminder is for daily recording, and user starts recording when they start haid,
-    // but the task wants it if they have started, meaning have records.
-
-    // Let's modify to check if there are records.
-
-    // But since haidService is not imported, let's import it.
-
-    // Actually, to avoid circular imports, perhaps check if there's a 'has_started_recording' flag in prefs.
-
-    // But easier: since scheduleDailyRecordingReminder is called when starting haid, and canceled when ending,
-    // and the task wants it if user has started, which is when they have records.
-
-    // Perhaps the logic is already correct, but the task says "jika user sudah mulai mencatat",
-    // meaning if user has started recording, which is true when they have records.
-
-    // But currently, it's scheduled when starting haid, which is when they start recording.
-
-    // I think the current logic is fine, but perhaps the reminder should be scheduled only if enabled and user has started (has name or something).
-
-    // The task says "jika user sudah mulai mencatat", and "mulai mencatat" means started recording.
-
-    // Since the reminder is scheduled when starting haid, it's correct.
-
-    // But perhaps it should be scheduled if user has started recording, meaning has at least one record.
-
-    // To implement that, I can check if there are records.
-
-    // Let's import haid_service and check.
-
-    // But to avoid import issues, perhaps add a parameter to the function.
-
-    // For now, since the function is called when starting haid, and user has started, it's fine.
-
-    // But the task says "jika user sudah mulai mencatat", so perhaps check if has records.
-
-    // Let's modify to check if has records.
-
-    // Import haid_service.
-
-    // But haid_service imports this? No.
-
-    // Let's see the imports.
-
-    // notification_service doesn't import haid_service.
-
-    // To check records, I can use Hive directly.
-
-    // But to keep it simple, perhaps the current logic is sufficient, as it's scheduled when starting.
-
-    // But the task says "jika user sudah mulai mencatat", and the reminder is for daily recording, so if they have started, they need daily reminder.
-
-    // I think it's already correct.
-
-    // But perhaps the reminder should be scheduled only if user has started recording, meaning has records, and not just when starting haid.
-
-    // The current code schedules when starting haid, which is when they start recording.
-
-    // I think it's fine.
-
-    // But to be safe, let's add a check if there are records.
-
-    // Since Hive is used, I can check if the box has values.
-
-    // Let's add the check.
-
+    // Ambil data haid aktif (dari Hive)
     final box = await Hive.openBox<HaidRecord>('haidRecords');
-    final hasRecords = box.isNotEmpty;
-    if (!hasRecords) return;
+    final activeRecord = box.values.cast<HaidRecord?>().firstWhere(
+      (r) => r != null && r.endDate == null,
+      orElse: () => null,
+    );
 
-    final now = tz.TZDateTime.now(tz.local);
-    var scheduledTime =
-        tz.TZDateTime(tz.local, now.year, now.month, now.day, 5, 0);
+    // 1. Notifikasi Terkait Siklus Aktif (Jika Sedang Haid/Pencatatan Aktif)
+    if (activeRecord != null) {
+      final startDate = activeRecord.startDate;
 
-    if (scheduledTime.isBefore(now)) {
-      scheduledTime = scheduledTime.add(const Duration(days: 1));
+      // Rule 1: Notifikasi 1 hari pencatatan (24 jam setelah awal pencatatan)
+      final rule1Time = startDate.add(const Duration(days: 1));
+      await _scheduleNotification(
+        id: 100001,
+        title: 'Al-Heedh',
+        body: 'Assalamualaikum $userName Kemarin anda sudah memulai pencatatan, jangan lupa untuk terus mengawasi darah anda dan akhiri haid anda jika darah sudah berhenti',
+        scheduledDateTime: rule1Time,
+      );
+
+      // Rule 2: Notifikasi hari ke 2 hingga seterusnya (hari 2 sampai 15)
+      for (int day = 2; day <= 15; day++) {
+        final rule2Time = startDate.add(Duration(days: day));
+        String body = '';
+        if (haidStatus == 'Baru Mengalami') {
+          body = 'Assalamualaikum $userName Anda sudah memulai pencatatan, jangan lupa untuk terus mengawasi darah anda dan akhiri haid anda jika darah sudah berhenti';
+        } else {
+          body = 'Assalamualaikum $userName Anda sedang dalam masa haid, Silahkan amalkan wirid untuk wanita haid dan jangan lupa untuk terus mengawasi darah anda';
+        }
+
+        await _scheduleNotification(
+          id: 100000 + day,
+          title: 'Al-Heedh',
+          body: body,
+          scheduledDateTime: rule2Time,
+        );
+      }
+
+      // Rule 3: Notifikasi pengingat untuk mengakhiri haid (khusus Sudah Biasa, H-1 sebelum kebiasaan)
+      if (haidStatus == 'Sudah Biasa' && kebiasaanHaid > 1) {
+        final rule3Time = startDate.add(Duration(days: kebiasaanHaid - 1));
+        await _scheduleNotification(
+          id: 200000,
+          title: 'Al-Heedh',
+          body: 'Assalamualaikum $userName Menurut kebiasaan haid anda, Besok seharusnya darah sudah berhenti keluar jadi jangan lupa untuk mengakhiri haid anda. Silahkan baca tatacara bersuci dari haid',
+          scheduledDateTime: rule3Time,
+          payload: 'bersuci_page',
+        );
+      }
     }
 
+    // Rule 4: Notifikasi prediksi haid (H-1 sebelum hari prediksi jatuh tempo, jam 7 pagi)
+    final predictionSkipped = prefs.getBool('prediction_skipped') ?? false;
+
+    // Jika prediksi tidak di-skip, cari tanggal prediksi berikutnya
+    if (!predictionSkipped) {
+      final allRecords = box.values.toList();
+      final nextPredictedDate = await FikihService().getNextPredictedStartDate(allRecords);
+
+      if (nextPredictedDate != null) {
+        // H-1 sebelum prediksi
+        final hMinus1Date = nextPredictedDate.subtract(const Duration(days: 1));
+        // Jam 7 pagi
+        final scheduledTime = DateTime(
+          hMinus1Date.year,
+          hMinus1Date.month,
+          hMinus1Date.day,
+          7,
+          0,
+        );
+
+        await _scheduleNotification(
+          id: 300000,
+          title: 'Al-Heedh',
+          body: 'Assalamualaikum $userName Besok adalah hari prediksi awal haid anda, jangan lupa untuk memastikan keluarnya darah',
+          scheduledDateTime: scheduledTime,
+        );
+      }
+    }
+  }
+
+  Future<void> _scheduleNotification({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime scheduledDateTime,
+    String? payload,
+  }) async {
+    final now = DateTime.now();
+    if (scheduledDateTime.isBefore(now)) return;
+
+    final tzDateTime = tz.TZDateTime.from(scheduledDateTime, tz.local);
+
     await flutterLocalNotificationsPlugin.zonedSchedule(
-      reminderId, // ID Unik untuk reminder harian
-      'Pengingat Pencatatan',
-      'Assalamualaikum $userName, bagaimana hari ini? Sudahkah darah keluar? Ayo catat!',
-      scheduledTime,
+      id,
+      title,
+      body,
+      tzDateTime,
       const NotificationDetails(
         android: AndroidNotificationDetails(
           'reminder_channel',
-          'Pengingat Harian',
-          channelDescription: 'Pengingat rutin untuk pencatatan',
+          'Notifikasi Pengingat',
+          channelDescription: 'Notifikasi pengingat untuk siklus haid',
           importance: Importance.high,
           priority: Priority.high,
           sound: RawResourceAndroidNotificationSound('reminder_sound'),
-          enableVibration: true,
-          actions: [
-            // Tambahkan aksi notifikasi
-            AndroidNotificationAction('record_action', 'CATAT SEKARANG',
-                showsUserInterface: true),
-          ],
-        ),
-      ),
-      androidAllowWhileIdle: true,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-      matchDateTimeComponents: DateTimeComponents.time,
-    );
-    debugPrint(
-        'Daily recording reminder scheduled for 5:00 AM (ID: $reminderId).');
-  }
-
-  Future<void> showInstantTestNotification() async {
-    const int testId = 888888;
-    const String title = 'Tes Notifikasi Al-Heedh';
-    const String body = 'Assalamualaikum! Ini adalah tes notifikasi instan dari aplikasi Al-Heedh. Fitur notifikasi Anda aktif!';
-
-    await flutterLocalNotificationsPlugin.show(
-      testId,
-      title,
-      body,
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          'reminder_channel',
-          'Pengingat Harian',
-          channelDescription: 'Pengingat rutin untuk pencatatan',
-          importance: Importance.high,
-          priority: Priority.high,
           enableVibration: true,
         ),
         iOS: DarwinNotificationDetails(
@@ -246,6 +213,10 @@ class NotificationService {
           presentSound: true,
         ),
       ),
+      androidAllowWhileIdle: true,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      payload: payload,
     );
   }
 }

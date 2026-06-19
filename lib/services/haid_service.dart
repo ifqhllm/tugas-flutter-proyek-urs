@@ -117,3 +117,5 @@ class HaidService {
     await box.clear();
   }
 }
+
+HaidService haidService = HaidService();

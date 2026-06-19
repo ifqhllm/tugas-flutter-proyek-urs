@@ -132,7 +132,7 @@ class _TatacaraBersuciPageState extends State<TatacaraBersuciPage> {
           const SizedBox(height: 12),
           _buildContentBox(
             text: '•\tMembaca niat mandi wajib:\n\n'
-                'Arab: نويت الغسل لرفع الحدث الأكبر من الحيض\النفاس فرضا لله تعالى\n\n'
+                'Arab: النفاس فرضا لله تعالى,نويت الغسل لرفع الحدث الأكبر من الحيض\n\n'
                 'Latin: "nawaitul ghusla liraf\'il hadatsil akbari minal haidi/nifasi fardhan lillahi ta\'ala"\n\n'
                 'Artinya: "aku berniat mandi untuk menghilangkan hadas besar dari haid/nifas fardhu karena allah ta\'ala"\n\n'
                 '•\tMeratakan/menyiram air ke seluruh anggota badan',

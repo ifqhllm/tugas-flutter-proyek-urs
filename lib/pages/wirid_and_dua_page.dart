@@ -503,21 +503,43 @@ class _WiridAndDuaPageState extends State<WiridAndDuaPage> {
       children: [
         Expanded(
           child: Center(
-            child: Text(
-              '$_tasbihCount',
-              style: const TextStyle(
-                fontSize: 80,
-                fontWeight: FontWeight.bold,
-                fontFamily: 'Poppins',
-                color: Colors.black87,
+            child: Container(
+              width: 200,
+              height: 200,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: secondaryColor.withOpacity(0.15),
+                    blurRadius: 20,
+                    spreadRadius: 2,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+                border: Border.all(
+                  color: secondaryColor.withOpacity(0.3),
+                  width: 8,
+                ),
+              ),
+              child: Center(
+                child: Text(
+                  '$_tasbihCount',
+                  style: const TextStyle(
+                    fontSize: 72,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Poppins',
+                    color: primaryColor,
+                  ),
+                ),
               ),
             ),
           ),
         ),
         SizedBox(
-          width: 300,
+          width: 320,
+          height: 220,
           child: Stack(
-            clipBehavior: Clip.none,
             alignment: Alignment.center,
             children: [
               GestureDetector(
@@ -527,31 +549,61 @@ class _WiridAndDuaPageState extends State<WiridAndDuaPage> {
                   });
                 },
                 child: Container(
-                  width: 200,
-                  height: 200,
+                  width: 170,
+                  height: 170,
                   decoration: BoxDecoration(
-                    color: secondaryColor,
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        secondaryColor,
+                        primaryColor,
+                      ],
+                    ),
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: secondaryColor.withOpacity(0.4),
+                        color: primaryColor.withOpacity(0.35),
                         blurRadius: 20,
+                        spreadRadius: 1,
                         offset: const Offset(0, 10),
+                      ),
+                      BoxShadow(
+                        color: Colors.white.withOpacity(0.2),
+                        blurRadius: 10,
+                        spreadRadius: -5,
+                        offset: const Offset(-5, -5),
                       ),
                     ],
                   ),
-                  child: const Center(
-                    child: Icon(
-                      Icons.touch_app,
-                      size: 80,
-                      color: Colors.white,
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.favorite,
+                          size: 48,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'TAP',
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.9),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            letterSpacing: 2,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
               ),
+              // Reset Button (Left)
               Positioned(
-                bottom: -20,
-                left: 20,
+                bottom: 25,
+                left: 10,
                 child: GestureDetector(
                   onTap: () {
                     setState(() {
@@ -559,24 +611,62 @@ class _WiridAndDuaPageState extends State<WiridAndDuaPage> {
                     });
                   },
                   child: Container(
-                    width: 60,
-                    height: 60,
+                    width: 55,
+                    height: 55,
                     decoration: BoxDecoration(
                       color: Colors.white,
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: Colors.black.withOpacity(0.08),
                           blurRadius: 10,
-                          offset: const Offset(0, 5),
+                          offset: const Offset(0, 4),
                         ),
                       ],
+                      border: Border.all(color: Colors.grey.shade100),
                     ),
                     child: const Center(
                       child: Icon(
                         Icons.refresh,
-                        color: secondaryColor,
-                        size: 30,
+                        color: primaryColor,
+                        size: 26,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              // Decrement Button (Right)
+              Positioned(
+                bottom: 25,
+                right: 10,
+                child: GestureDetector(
+                  onTap: () {
+                    if (_tasbihCount > 0) {
+                      setState(() {
+                        _tasbihCount--;
+                      });
+                    }
+                  },
+                  child: Container(
+                    width: 55,
+                    height: 55,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                      border: Border.all(color: Colors.grey.shade100),
+                    ),
+                    child: const Center(
+                      child: Icon(
+                        Icons.remove,
+                        color: primaryColor,
+                        size: 26,
                       ),
                     ),
                   ),
@@ -585,7 +675,7 @@ class _WiridAndDuaPageState extends State<WiridAndDuaPage> {
             ],
           ),
         ),
-        const SizedBox(height: 80),
+        const SizedBox(height: 50),
       ],
     );
   }

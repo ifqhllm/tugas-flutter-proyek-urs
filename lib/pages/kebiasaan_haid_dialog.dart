@@ -3,13 +3,14 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/colors.dart';
 import '../main.dart';
+import '../services/notification_service.dart';
 
-void showKebiasaanHaidDialog(BuildContext context, {bool isFromMainScreen = false}) {
+void showKebiasaanHaidDialog(BuildContext context, {bool isFromMainScreen = false, VoidCallback? onComplete}) {
   final TextEditingController controller = TextEditingController();
   
   showDialog(
     context: context,
-    barrierDismissible: false,
+    barrierDismissible: isFromMainScreen,
     builder: (BuildContext dialogContext) {
       return AlertDialog(
         title: const Text('Kebiasaan Haid', style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Poppins')),
@@ -39,15 +40,28 @@ void showKebiasaanHaidDialog(BuildContext context, {bool isFromMainScreen = fals
           ],
         ),
         actions: [
+          if (isFromMainScreen)
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+              },
+              child: const Text(
+                'Batal',
+                style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
+              ),
+            ),
           ElevatedButton(
             onPressed: () async {
               final val = int.tryParse(controller.text.trim());
               if (val != null && val > 0) {
                 final prefs = await SharedPreferences.getInstance();
                 await prefs.setInt('kebiasaan_haid', val);
+                await NotificationService().scheduleAllNotifications();
                 if (dialogContext.mounted) {
                   Navigator.of(dialogContext).pop(); // Close dialog
                 }
+                
+                onComplete?.call();
                   
                 // Jika dipanggil dari Onboarding, langsung navigate ke MainScreen
                 if (!isFromMainScreen && context.mounted) {

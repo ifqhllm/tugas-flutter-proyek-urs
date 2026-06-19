@@ -32,6 +32,7 @@ dev_dependencies:
   # Dev dependencies untuk Hive (PENTING: Perlu menjalankan build_runner)
   hive_generator: ^2.0.1
   build_runner: ^2.4.9
+  flutter_launcher_icons: ^0.13.1
 
 # Konfigurasi Aset Gambar
 flutter:
@@ -41,4 +42,9 @@ flutter:
     - assets/images/
     - assets/silhouette.png
     - assets/background.jpg
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/images/Logo.png"
  

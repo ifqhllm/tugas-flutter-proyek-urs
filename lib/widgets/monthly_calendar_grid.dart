@@ -130,9 +130,9 @@ class MonthlyCalendarGrid extends StatelessWidget {
 
     Color textColor = isCurrentMonth ? Colors.black87 : Colors.grey;
     if (day.weekday == DateTime.friday) {
-      textColor = Colors.green;
+      textColor = markerColor == istihadahColor ? Colors.black : Colors.green;
     } else if (day.weekday == DateTime.sunday) {
-      textColor = Colors.red;
+      textColor = markerColor == menstrualColor ? Colors.black : Colors.red;
     }
 
     return Container(

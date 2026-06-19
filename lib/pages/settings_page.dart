@@ -3,12 +3,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/colors.dart';
 import '../main.dart' as main;
 import '../services/notification_service.dart';
+import '../services/haid_service.dart';
 import '../widgets/background_widget.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'kebiasaan_haid_dialog.dart';
 
 class SettingsPage extends StatefulWidget {
-  const SettingsPage({super.key});
+  final VoidCallback? onDataChanged;
+  const SettingsPage({super.key, this.onDataChanged});
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -36,10 +39,7 @@ class _SettingsPageState extends State<SettingsPage> {
     setState(() {
       _recordingReminderEnabled = value;
     });
-    // If disabled, cancel existing reminder
-    if (!value) {
-      await NotificationService().cancelRecordingReminder();
-    }
+    await NotificationService().scheduleAllNotifications();
   }
 
   Future<void> _deleteAllCycleHistory(BuildContext context) async {
@@ -64,7 +64,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
     if (confirm == true) {
       try {
-        await main.haidService.clearAllRecords();
+        await haidService.clearAllRecords();
 
         // Also clear the 6 user-input cycles
         final prefs = await SharedPreferences.getInstance();
@@ -84,6 +84,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 content: Text('Semua riwayat siklus berhasil dihapus')),
           );
         }
+        widget.onDataChanged?.call();
       } catch (e) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -138,6 +139,7 @@ class _SettingsPageState extends State<SettingsPage> {
           const SnackBar(content: Text('Nama pengguna berhasil diubah')),
         );
       }
+      widget.onDataChanged?.call();
     }
   }
 
@@ -482,34 +484,12 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             const SizedBox(height: 10),
             SwitchListTile(
-              title: const Text('Pengingat Pencatatan Harian',
+              title: const Text('Notifikasi Pengingat',
                   style: TextStyle(color: Colors.black)),
               subtitle:
                   const Text('Pengingat harian untuk mencatat siklus haid'),
               value: _recordingReminderEnabled,
               onChanged: _updateRecordingReminder,
-            ),
-            ListTile(
-              leading: const Icon(Icons.notifications_active, color: primaryColor),
-              title: const Text('Tes Notifikasi Instan',
-                  style: TextStyle(color: Colors.black)),
-              subtitle: const Text('Kirim notifikasi uji coba langsung ke HP Anda'),
-              onTap: () async {
-                try {
-                  await NotificationService().showInstantTestNotification();
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Notifikasi tes berhasil dikirim!')),
-                    );
-                  }
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Gagal mengirim notifikasi tes: $e')),
-                    );
-                  }
-                }
-              },
             ),
             const Divider(),
             ListTile(
@@ -525,6 +505,19 @@ class _SettingsPageState extends State<SettingsPage> {
                   style: TextStyle(color: Colors.black)),
               subtitle: const Text('Mengubah nama panggilan Anda'),
               onTap: () => _changeUserName(context),
+            ),
+            ListTile(
+              leading: const Icon(Icons.favorite, color: primaryColor),
+              title: const Text('Ubah Kebiasaan Haid',
+                  style: TextStyle(color: Colors.black)),
+              subtitle: const Text('Mengubah lama kebiasaan haid Anda'),
+              onTap: () {
+                showKebiasaanHaidDialog(
+                  context,
+                  isFromMainScreen: true,
+                  onComplete: widget.onDataChanged,
+                );
+              },
             ),
             const Divider(),
             ListTile(

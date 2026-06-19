@@ -163,13 +163,7 @@ class _CalendarPageState extends State<CalendarPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
-              'Kalender Siklus',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                  fontSize: 24, fontWeight: FontWeight.bold, color: textColor),
-            ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
             MonthlyCalendarGrid(
               focusedDay: _focusedDay,
               records: widget.records,

@@ -13,18 +13,20 @@ import 'faq_page.dart';
 import 'six_records_form.dart';
 import 'hukum_haid_terputus_page.dart';
 import 'masa_keluarnya_darah_haid_page.dart';
+import 'all_history_page.dart';
 
 final FikihService fikihService = FikihService();
-final HaidService haidService = HaidService();
 
 class CycleTrackerPage extends StatefulWidget {
   final String userName;
   final Future<void> Function()? onDataChanged;
+  final VoidCallback? onPredictionCompleted;
 
   const CycleTrackerPage({
     super.key,
     required this.userName,
     this.onDataChanged,
+    this.onPredictionCompleted,
   });
 
   @override
@@ -122,85 +124,88 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
     }
   }
 
-  Future<DateTime?> _selectDateAndTime(BuildContext context, String title,
-      {bool allowFuture = false}) async {
-    // 1. Pilih Tanggal (Date Picker)
-    final DateTime? date = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2020),
-      lastDate: allowFuture
-          ? DateTime.now().add(const Duration(days: 30))
-          : DateTime.now(),
-      helpText: title,
-      fieldLabelText: 'Pilih Tanggal',
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: primaryColor,
-              onPrimary: Colors.white,
-              onSurface: textColor,
-            ),
-            textButtonTheme: TextButtonThemeData(
-              style: TextButton.styleFrom(foregroundColor: primaryColor),
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-
-    if (!mounted) return null;
-    if (date == null) return null;
-
-    // 2. Pilih Jam (Time Picker)
-    final TimeOfDay? time = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.now(),
-      helpText: 'Pilih Jam',
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: primaryColor,
-              onPrimary: Colors.white,
-              onSurface: textColor,
-            ),
-            textButtonTheme: TextButtonThemeData(
-              style: TextButton.styleFrom(foregroundColor: primaryColor),
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-
-    if (!mounted) return null;
-    if (time == null) {
-      return null;
-    }
-
-    // Gabungkan Tanggal dan Jam
-    return DateTime(
-      date.year,
-      date.month,
-      date.day,
-      time.hour,
-      time.minute,
-    );
-  }
-
-// 1. Fungsi untuk MEMULAI siklus (Hanya mencatat start date)
+  // 1. Fungsi untuk MEMULAI siklus (Hanya mencatat start date)
   Future<void> _startHaidCycle() async {
     if (_isLoading) return;
 
-    final selectedDateTime = await _selectDateAndTime(
-      context,
-      'Tanggal Mulai Haid',
-      allowFuture: false,
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        contentPadding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: primaryColor.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.help_outline_rounded,
+                color: primaryColor,
+                size: 40,
+              ),
+            ),
+            const SizedBox(height: 18),
+            const Text(
+              'Konfirmasi Mulai',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Pencatatan akan dimulai, Apakah anda benar - benar keluar darah?',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 14,
+                color: Colors.black87,
+              ),
+            ),
+          ],
+        ),
+        actionsAlignment: MainAxisAlignment.spaceEvenly,
+        actionsPadding: const EdgeInsets.only(bottom: 16),
+        actions: [
+          OutlinedButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+              side: const BorderSide(color: Colors.grey),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text(
+              'Batal',
+              style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontFamily: 'Poppins'),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 10),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              elevation: 2,
+            ),
+            child: const Text(
+              'Ok',
+              style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Poppins'),
+            ),
+          ),
+        ],
+      ),
     );
-    if (selectedDateTime == null) return;
+
+    if (confirm != true) return;
+
+    final selectedDateTime = DateTime.now();
 
     final prefs = await SharedPreferences.getInstance();
     final haidStatus = prefs.getString('haid_status') ?? 'Sudah Biasa';
@@ -263,57 +268,30 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
       final masaSuciDays = selectedDateMidnight.difference(lastEndDateMidnight).inDays;
 
       if (masaSuciDays < 15) {
-        if (!mounted) return;
-        final bool? resume = await showDialog<bool>(
-          context: context,
-          builder: (context) {
-            return AlertDialog(
-              title: const Text('Peringatan', style: TextStyle(fontWeight: FontWeight.bold)),
-              content: const Text(
-                'Masa suci anda masih belum sampai 15 hari apakah ada darah keluar lagi?, status hukum haid mungkin akan berubah',
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(false),
-                  child: const Text('Batal', style: TextStyle(color: Colors.grey)),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(true),
-                  child: const Text('Ok', style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold)),
-                ),
-              ],
+        setState(() => _isLoading = true);
+        try {
+          await haidService.resumeHaid(lastEndedRecord);
+          await haidService.logBloodEvent(selectedDateTime, 'CONTINUE_FLOW');
+          await NotificationService().scheduleAllNotifications();
+          await _loadCurrentRecord();
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Pencatatan dilanjutkan. Status diperbarui.')),
             );
-          },
-        );
-
-        if (resume == true) {
-          setState(() => _isLoading = true);
-          try {
-            await haidService.resumeHaid(lastEndedRecord);
-            await haidService.logBloodEvent(selectedDateTime, 'CONTINUE_FLOW');
-            await NotificationService().scheduleDailyRecordingReminder();
-            await _loadCurrentRecord();
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Pencatatan dilanjutkan. Status diperbarui.')),
-              );
-            }
-          } catch (e) {
-            debugPrint("Error saat melanjutkan haid: $e");
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Gagal melanjutkan pencatatan: ${e.toString()}')),
-              );
-            }
-          } finally {
-            if (mounted) {
-              setState(() => _isLoading = false);
-            }
           }
-          return; // Stop here, don't create new record
-        } else {
-          return; // Cancelled by user
+        } catch (e) {
+          debugPrint("Error saat melanjutkan haid: $e");
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Gagal melanjutkan pencatatan: ${e.toString()}')),
+            );
+          }
+        } finally {
+          if (mounted) {
+            setState(() => _isLoading = false);
+          }
         }
+        return; // Stop here, don't create new record
       }
     }
 
@@ -325,7 +303,7 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
       await haidService.logBloodEvent(selectedDateTime, 'START');
 
       // Schedule daily recording reminder
-      await NotificationService().scheduleDailyRecordingReminder();
+      await NotificationService().scheduleAllNotifications();
 
       await _loadCurrentRecord();
       if (mounted) {
@@ -349,18 +327,88 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
     }
   }
 
-
-
 // 3. Fungsi untuk MENGAKHIRI SIKLUS (Memicu Perhitungan Fiqh Final)
   Future<void> _endHaidFinal() async {
     if (_isLoading) return;
 
-    final selectedDateTime = await _selectDateAndTime(
-      context,
-      'Waktu Darah Benar-benar Berhenti',
-      allowFuture: true,
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        contentPadding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: primaryColor.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.check_circle_outline_rounded,
+                color: primaryColor,
+                size: 40,
+              ),
+            ),
+            const SizedBox(height: 18),
+            const Text(
+              'Konfirmasi Selesai',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Pencatatan akan diakhiri, Apakah darah sudah benar - benar berhenti?',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 14,
+                color: Colors.black87,
+              ),
+            ),
+          ],
+        ),
+        actionsAlignment: MainAxisAlignment.spaceEvenly,
+        actionsPadding: const EdgeInsets.only(bottom: 16),
+        actions: [
+          OutlinedButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+              side: const BorderSide(color: Colors.grey),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text(
+              'Batal',
+              style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontFamily: 'Poppins'),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 10),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              elevation: 2,
+            ),
+            child: const Text(
+              'Ok',
+              style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Poppins'),
+            ),
+          ),
+        ],
+      ),
     );
-    if (selectedDateTime == null) return;
+
+    if (confirm != true) return;
+
+    final selectedDateTime = DateTime.now();
 
     setState(() => _isLoading = true);
 
@@ -380,8 +428,8 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
         await prefs.setInt('kebiasaan_haid', kebiasaanVal);
       }
 
-      // Cancel recording reminder
-      await NotificationService().cancelRecordingReminder();
+      // Update notifications
+      await NotificationService().scheduleAllNotifications();
 
       // Muat ulang data & trigger MainScreen update (untuk Calendar)
       await _loadCurrentRecord();
@@ -500,7 +548,7 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'Assalamualaikum, ${widget.userName}',
+                      'Assalamualaikum, ${widget.userName}!',
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                         fontSize: 25,
@@ -869,7 +917,11 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                                 ElevatedButton.icon(
                                   onPressed: () {
                                     showSixRecordsBottomSheet(
-                                        context, widget.userName);
+                                      context,
+                                      widget.userName,
+                                      isFromMainScreen: true,
+                                      onComplete: widget.onPredictionCompleted,
+                                    );
                                   },
                                   icon: const Icon(Icons.edit),
                                   label: const Text('Catat'),
@@ -990,7 +1042,7 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                           style: TextStyle(color: textColor),
                         )
                       else
-                        ..._allRecords.reversed.take(5).map((record) {
+                        ..._allRecords.reversed.take(3).map((record) {
                           final start =
                               '${record.startDate.day}/${record.startDate.month}/${record.startDate.year}';
                           final end = record.endDate != null
@@ -1306,6 +1358,49 @@ class _CycleTrackerPageState extends State<CycleTrackerPage> {
                             ),
                           );
                         }),
+                        if (_allRecords.length > 3) ...[
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => AllHistoryPage(
+                                      records: _allRecords,
+                                      haidStatus: _haidStatus,
+                                      kebiasaanHaid: _kebiasaanHaid,
+                                      onDelete: () async {
+                                        await _loadCurrentRecord();
+                                        if (widget.onDataChanged != null) {
+                                          await widget.onDataChanged!();
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                );
+                              },
+                              icon: const Icon(Icons.history, color: Colors.white, size: 18),
+                              label: const Text(
+                                'Lihat Semua Riwayat',
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: secondaryColor,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                     ],
                   ),
                 ),

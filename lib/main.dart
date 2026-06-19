@@ -16,7 +16,6 @@ import 'pages/six_records_form.dart';
 import 'pages/kebiasaan_haid_dialog.dart';
 
 final FikihService fikihService = FikihService();
-final HaidService haidService = HaidService();
 
 const String userNameKey = 'user_name';
 
@@ -125,18 +124,39 @@ class _NameInputScreenState extends State<NameInputScreen> {
       body: BackgroundWidget(
         child: SingleChildScrollView(
           child: Container(
-            height: MediaQuery.of(context).size.height,
+            constraints: BoxConstraints(
+              minHeight: MediaQuery.of(context).size.height,
+            ),
             padding: const EdgeInsets.all(32.0),
             alignment: Alignment.center,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                // Logo kecil di Onboarding
-                Image.asset(
-                  'assets/images/Logo.png',
-                  height: 100,
-                  width: 100,
+                // Logo kecil di Onboarding dibuat melingkar dan menyatu dengan background
+                Center(
+                  child: ShaderMask(
+                    shaderCallback: (rect) {
+                      return const RadialGradient(
+                        colors: [Colors.black, Colors.transparent],
+                        stops: [0.8, 1.0],
+                      ).createShader(rect);
+                    },
+                    blendMode: BlendMode.dstIn,
+                    child: Container(
+                      width: 120,
+                      height: 120,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                      ),
+                      child: ClipOval(
+                        child: Image.asset(
+                          'assets/images/Logo.png',
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 30),
                 const Text(
@@ -245,155 +265,6 @@ class _NameInputScreenState extends State<NameInputScreen> {
   }
 }
 
-class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
-
-  @override
-  State<SplashScreen> createState() => _SplashScreenState();
-}
-
-class _SplashScreenState extends State<SplashScreen> {
-  @override
-  void initState() {
-    super.initState();
-    _navigateToNextScreen();
-  }
-
-  _navigateToNextScreen() async {
-    final prefs = await SharedPreferences.getInstance();
-    final userName = prefs.getString(userNameKey);
-
-    await Future.delayed(const Duration(milliseconds: 500));
-
-    if (mounted) {
-      if (userName != null && userName.isNotEmpty) {
-        Navigator.of(context).pushReplacement(
-          PageRouteBuilder(
-            pageBuilder: (context, animation, secondaryAnimation) =>
-                const MainScreen(),
-            transitionsBuilder:
-                (context, animation, secondaryAnimation, child) {
-              const begin = Offset(1.0, 0.0);
-              const end = Offset.zero;
-              const curve = Curves.easeInOutCubic;
-
-              var tween =
-                  Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-              var offsetAnimation = animation.drive(tween);
-
-              return SlideTransition(
-                position: offsetAnimation,
-                child: child,
-              );
-            },
-            transitionDuration: const Duration(milliseconds: 500),
-          ),
-        );
-      } else {
-        Navigator.of(context).pushReplacement(
-          PageRouteBuilder(
-            pageBuilder: (context, animation, secondaryAnimation) =>
-                const NameInputScreen(),
-            transitionsBuilder:
-                (context, animation, secondaryAnimation, child) {
-              const begin = Offset(1.0, 0.0);
-              const end = Offset.zero;
-              const curve = Curves.easeInOutCubic;
-
-              var tween =
-                  Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-              var offsetAnimation = animation.drive(tween);
-
-              return SlideTransition(
-                position: offsetAnimation,
-                child: child,
-              );
-            },
-            transitionDuration: const Duration(milliseconds: 500),
-          ),
-        );
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: BackgroundWidget(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Menampilkan logo yang diunggah
-                    Image.asset(
-                      'assets/images/Logo-1.png',
-                      height: 250,
-                      width: 250,
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) {
-                        return const Icon(Icons.mosque,
-                            size: 250, color: primaryColor);
-                      },
-                    ),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'AL-HEEDH',
-                      style: TextStyle(
-                        fontSize: 28,
-                        color: secondaryColor,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    const Text(
-                      'Solusi Cerdas Muslimah',
-                      style: TextStyle(
-                        fontSize: 18,
-                        color: secondaryColor,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            // Indikator progres di bagian bawah
-            Padding(
-              padding: const EdgeInsets.only(bottom: 80),
-              child: SizedBox(
-                height: 8,
-                width: 300,
-                child: ShaderMask(
-                  shaderCallback: (Rect bounds) {
-                    return const LinearGradient(
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                      colors: [
-                        Colors.yellow,
-                        Colors.red,
-                      ],
-                    ).createShader(bounds);
-                  },
-                  child: const LinearProgressIndicator(
-                    value: null,
-                    backgroundColor: Colors.transparent,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 // --- Komponen Utama Aplikasi (MainScreen) ---
 
 void main() async {
@@ -408,25 +279,30 @@ void main() async {
     await Hive.openBox<HaidRecord>('haidRecords');
     // Initialize notifications
     await NotificationService().init();
-    await NotificationService().scheduleDailyRecordingReminder();
+    await NotificationService().scheduleAllNotifications();
+
+    final prefs = await SharedPreferences.getInstance();
+    final userName = prefs.getString(userNameKey);
 
     initializeDateFormatting('id_ID', null).then((_) {
-      runApp(const AlHeedhApp());
+      runApp(AlHeedhApp(hasUser: userName != null && userName.isNotEmpty));
     });
   } catch (e) {
     await initializeDateFormatting('id_ID', null);
     print('🚨 FATAL INIT ERROR: $e');
-    runApp(const AlHeedhApp());
+    runApp(const AlHeedhApp(hasUser: false));
   }
 }
 
 class AlHeedhApp extends StatelessWidget {
-  const AlHeedhApp({super.key});
+  final bool hasUser;
+  const AlHeedhApp({super.key, required this.hasUser});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Aplikasi Al-Heedh: Solusi Cerdas Muslimah',
+      navigatorKey: NotificationService.navigatorKey,
+      title: 'Aplikasi Al_Heedh: Solusi Cerdas Muslimah',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
@@ -439,7 +315,7 @@ class AlHeedhApp extends StatelessWidget {
         useMaterial3: true,
         fontFamily: 'Inter',
       ),
-      home: const SplashScreen(),
+      home: hasUser ? const MainScreen() : const NameInputScreen(),
     );
   }
 }
@@ -461,9 +337,13 @@ class _MainScreenState extends State<MainScreen> {
   bool _isDataLoaded = false;
 
   late List<Widget> _widgetOptions = [
-    CycleTrackerPage(userName: 'Memuat...', onDataChanged: _loadInitialData),
+    CycleTrackerPage(
+      userName: 'Memuat...',
+      onDataChanged: _loadInitialData,
+      onPredictionCompleted: _handleReloadData,
+    ),
     const Center(child: CircularProgressIndicator()),
-    const SettingsPage(),
+    SettingsPage(onDataChanged: _handleReloadData),
   ];
 
   @override
@@ -472,12 +352,22 @@ class _MainScreenState extends State<MainScreen> {
     _loadInitialData();
   }
 
+  Future<void> _handleReloadData() async {
+    if (mounted) {
+      setState(() {
+        _isDataLoaded = false;
+      });
+    }
+    await Future.delayed(const Duration(milliseconds: 1500));
+    await _loadInitialData();
+  }
+
   Future<void> _loadInitialData() async {
+    String userName = 'Pengguna';
     try {
       // Muat Nama Pengguna
       final prefs = await SharedPreferences.getInstance();
-      final userName =
-          prefs.getString(userNameKey) ?? 'Pengguna'; // Ganti _userNameKey
+      userName = prefs.getString(userNameKey) ?? 'Pengguna'; // Ganti _userNameKey
 
       // Muat Data Siklus Awal
       final allRecords = await haidService.getAllRecords();
@@ -494,9 +384,12 @@ class _MainScreenState extends State<MainScreen> {
           // Inisialisasi widget options setelah data dimuat
           _widgetOptions = <Widget>[
             CycleTrackerPage(
-                userName: _userName, onDataChanged: _loadInitialData),
+              userName: _userName,
+              onDataChanged: _loadInitialData,
+              onPredictionCompleted: _handleReloadData,
+            ),
             CalendarPage(records: _allRecords, predictedDate: _predictedDate),
-            const SettingsPage(),
+            SettingsPage(onDataChanged: _handleReloadData),
           ];
         });
       }
@@ -504,13 +397,17 @@ class _MainScreenState extends State<MainScreen> {
       debugPrint("Error saat memuat data awal di MainScreen: $e");
       if (mounted) {
         setState(() {
+          _userName = userName;
           _isDataLoaded =
               true; // Tetap tampilkan UI walau ada error, untuk debug
           _widgetOptions = <Widget>[
             CycleTrackerPage(
-                userName: _userName, onDataChanged: _loadInitialData),
+              userName: _userName,
+              onDataChanged: _loadInitialData,
+              onPredictionCompleted: _handleReloadData,
+            ),
             const CalendarPage(records: [], predictedDate: null),
-            const SettingsPage(),
+            SettingsPage(onDataChanged: _handleReloadData),
           ];
         });
       }
@@ -538,15 +435,31 @@ class _MainScreenState extends State<MainScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Image.asset(
-                        'assets/images/Logo-1.png',
-                        height: 250,
-                        width: 250,
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) {
-                          return const Icon(Icons.mosque,
-                              size: 250, color: primaryColor);
+                      ShaderMask(
+                        shaderCallback: (rect) {
+                          return const RadialGradient(
+                            colors: [Colors.black, Colors.transparent],
+                            stops: [0.8, 1.0],
+                          ).createShader(rect);
                         },
+                        blendMode: BlendMode.dstIn,
+                        child: Container(
+                          width: 280,
+                          height: 280,
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                          ),
+                          child: ClipOval(
+                            child: Image.asset(
+                              'assets/images/Logo.png',
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return const Icon(Icons.mosque,
+                                    size: 280, color: primaryColor);
+                              },
+                            ),
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 20),
                       const Text(

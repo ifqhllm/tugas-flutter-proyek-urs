@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'kebiasaan_haid_dialog.dart';
 
-void showSixRecordsBottomSheet(BuildContext context, String name, {bool isFromMainScreen = true}) {
+void showSixRecordsBottomSheet(BuildContext context, String name, {bool isFromMainScreen = true, VoidCallback? onComplete}) {
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
@@ -18,7 +18,12 @@ void showSixRecordsBottomSheet(BuildContext context, String name, {bool isFromMa
         minChildSize: 0.5,
         expand: false,
         builder: (_, ScrollController scrollController) {
-          return _SixRecordsBottomSheetContent(name: name, isFromMainScreen: isFromMainScreen, parentContext: context);
+          return _SixRecordsBottomSheetContent(
+            name: name,
+            isFromMainScreen: isFromMainScreen,
+            parentContext: context,
+            onComplete: onComplete,
+          );
         },
       );
     },
@@ -29,7 +34,13 @@ class _SixRecordsBottomSheetContent extends StatefulWidget {
   final String name;
   final bool isFromMainScreen;
   final BuildContext parentContext;
-  const _SixRecordsBottomSheetContent({required this.name, this.isFromMainScreen = true, required this.parentContext});
+  final VoidCallback? onComplete;
+  const _SixRecordsBottomSheetContent({
+    required this.name,
+    this.isFromMainScreen = true,
+    required this.parentContext,
+    this.onComplete,
+  });
 
   @override
   State<_SixRecordsBottomSheetContent> createState() =>
@@ -76,9 +87,12 @@ class _SixRecordsBottomSheetContentState
     await prefs.setBool('prediction_completed', true);
 
     if (mounted) {
-      // Pindah ke dialog kebiasaan haid bukan langsung ke main
       Navigator.of(context).pop(); // Tutup bottom sheet
-      showKebiasaanHaidDialog(widget.parentContext, isFromMainScreen: widget.isFromMainScreen);
+      if (!widget.isFromMainScreen) {
+        showKebiasaanHaidDialog(widget.parentContext, isFromMainScreen: false);
+      } else {
+        widget.onComplete?.call();
+      }
     }
   }
 

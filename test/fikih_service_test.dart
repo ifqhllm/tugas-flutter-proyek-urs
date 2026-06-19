@@ -29,7 +29,7 @@ void main() {
         haidStatus: 'Baru Mengalami',
       );
 
-      expect(result['status'], equals('HAID SELAMA 5 HARI'));
+      expect(result['status'], equals('HAID SELAMA 4 HARI'));
       expect(result['type'], equals('HAID'));
       expect(result['haidDays'], equals(5));
       expect(result['istihadahDays'], equals(0));
@@ -57,19 +57,19 @@ void main() {
         haidStatus: 'Baru Mengalami',
       );
 
-      expect(result['status'], equals('HAID SELAMA 15 HARI'));
+      expect(result['status'], equals('ISTIHADAH LEBIH 15 HARI'));
       expect(result['type'], equals('HAID'));
       expect(result['haidDays'], equals(15));
       expect(result['istihadahDays'], equals(4));
       expect(
         result['message'],
-        contains("karena ini adalah haid pertama anda maka sesuai hukum syari'at haid anda adalah 15 hari selebihnya istihadah"),
+        contains("terhitung istihadah karena lebih dari maksimal masa haid"),
       );
     });
 
     test('Accustomed user with 7 days custom and > 15 days bleeding should have 7 days haid and rest istihadah', () {
       final start = DateTime(2026, 5, 1, 8, 0);
-      final end = DateTime(2026, 5, 16, 8, 0); // 16 days
+      final end = DateTime(2026, 5, 17, 8, 0); // 16 days / 384 hours (> 15 days)
       
       final events = List.generate(
         24,
@@ -89,11 +89,11 @@ void main() {
         kebiasaanHaid: 7,
       );
 
-      expect(result['status'], equals('HAID SELAMA 7 HARI'));
+      expect(result['status'], equals('ISTIHADAH LEBIH 15 HARI'));
       expect(result['type'], equals('HAID'));
       expect(result['haidDays'], equals(7));
-      expect(result['istihadahDays'], equals(9));
-      expect(result['message'], contains("7 hari haid mengikuti kebiasaan haid yang anda inputkan, selebihnya istihadah"));
+      expect(result['istihadahDays'], equals(10));
+      expect(result['message'], contains("terhitung istihadah karena lebih dari maksimal masa haid"));
     });
   });
 }
